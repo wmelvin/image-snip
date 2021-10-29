@@ -98,45 +98,60 @@ def get_args():
     )
 
     ap.add_argument(
-        "-l",
-        "--list-file",
-        dest="list_file",
+        "--options-file",
+        dest="opt_file",
         action="store",
-        help="Name of file containing a list of image file names, "
-        + "one per line.",
+        help="Name of file containing a list of process instructions and "
+        + "image file names, one per line.",
     )
 
     args = ap.parse_args()
 
-    return args.list_file
+    return args.opt_file
+
+
+def get_target_size(proc: str):
+    """
+    Extracts target size as a tuple of 2 integers from a string that ends with
+    two integers, in parantheses, separated by a comma.
+    """
+    a = proc.strip(")").split("(")
+    assert len(a) == 2
+    b = a[1].split(",")
+    assert len(b) == 2
+    return (int(b[0]), int(b[1]))
 
 
 def main():
-    list_file = get_args()
+    opt_file = get_args()
 
-    #  For now, require a list file. Support for image names as args can be
-    #  added later.
-    if list_file is None:
-        sys.stderr.write("ERROR: No image list file specified.\n")
+    if opt_file is None:
+        sys.stderr.write("ERROR: No options file specified.\n")
         sys.exit(1)
 
-    if not Path(list_file).exists():
-        sys.stderr.write(f"ERROR: List file not found: '{list_file}'\n")
+    if not Path(opt_file).exists():
+        sys.stderr.write(f"ERROR: File not found: '{opt_file}'\n")
         sys.exit(1)
 
-    print(f"Reading image list from '{list_file}'.")
+    print(f"Reading options from '{opt_file}'.")
 
     image_paths = []
+    proc_list = []
     error_list = []
-    with open(list_file, "r") as f:
+    with open(opt_file, "r") as f:
         for line in f.readlines():
             s = line.strip().strip("'\"")
             if (0 < len(s)) and (not s.startswith("#")):
-                p = Path(s).expanduser().resolve()
-                if p.exists():
-                    image_paths.append(p)
+                if s.startswith("crop_from_"):
+                    #  Process instruction.
+                    proc_list.append(s)
                 else:
-                    error_list.append(f"File not found: '{p}'")
+                    #  Image file path.
+                    p = Path(s).expanduser().resolve()
+                    if p.exists():
+                        image_paths.append(p)
+                    else:
+                        error_list.append(f"File not found: '{p}'")
 
     if 0 < len(error_list):
         sys.stderr.write("ERRORS:\n")
@@ -146,7 +161,14 @@ def main():
 
     if len(image_paths) == 0:
         sys.stderr.write(
-            "ERROR: List file did not contain any valid file names.\n"
+            "ERROR: Options file did not contain any image file names.\n"
+        )
+        sys.exit(1)
+
+    if len(proc_list) == 0:
+        sys.stderr.write(
+            "ERROR: Options file did not contain any process "
+            + "instructions.\n"
         )
         sys.exit(1)
 
@@ -164,31 +186,50 @@ def main():
 
     #  sys.exit(0)  # <-- stop here for now.
 
-    # target_size = (650, 950)
-    #  TODO: Add to args.
-
     for image_path in image_paths:
         print(f"Reading '{image_path}'")
 
         img = Image.open(image_path)
 
+        #  TODO:
         # new_size = get_new_size_zoom(img.size, target_size)
         # img = img.resize(new_size)
 
+        #  TODO:
         # crop_box = crop_box_center(img.size, target_size)
         # img = img.crop(crop_box)
 
-        target_size = (1190, 980)
-        crop_box = crop_box_left_top(img.size, target_size)
-        img = img.crop(crop_box)
+        # target_size = (1190, 980)
+        # crop_box = crop_box_left_top(img.size, target_size)
+        # img = img.crop(crop_box)
 
-        target_size = (640, 960)
-        crop_box = crop_box_right_top(img.size, target_size)
-        img = img.crop(crop_box)
+        # target_size = (640, 960)
+        # crop_box = crop_box_right_top(img.size, target_size)
+        # img = img.crop(crop_box)
 
-        target_size = (640, 855)
-        crop_box = crop_box_left_bottom(img.size, target_size)
-        img = img.crop(crop_box)
+        # target_size = (640, 855)
+        # crop_box = crop_box_left_bottom(img.size, target_size)
+        # img = img.crop(crop_box)
+
+        for proc in proc_list:
+            if proc.startswith("crop_from_left_top"):
+                target_size = get_target_size(proc)
+                crop_box = crop_box_left_top(img.size, target_size)
+                img = img.crop(crop_box)
+            elif proc.startswith("crop_from_right_top("):
+                target_size = get_target_size(proc)
+                crop_box = crop_box_right_top(img.size, target_size)
+                img = img.crop(crop_box)
+            elif proc.startswith("crop_from_left_bottom("):
+                target_size = get_target_size(proc)
+                crop_box = crop_box_left_bottom(img.size, target_size)
+                img = img.crop(crop_box)
+            else:
+                sys.stderr.write(
+                    "ERROR: Unknown process instruction in options file:\n"
+                    + f"'{proc}'\n"
+                )
+                sys.exit(1)
 
         file_name = get_output_name(out_path, image_path)
         print(f"Saving '{file_name}'")
@@ -198,5 +239,5 @@ def main():
         img.save(file_name)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
