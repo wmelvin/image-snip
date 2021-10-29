@@ -8,6 +8,13 @@ from pathlib import Path
 from PIL import Image
 
 
+do_new_subdir = False
+
+do_datetime_tag = True
+
+dt_tag = datetime.now().strftime("%Y%m%d_%H%M%S")
+
+
 def get_new_size_zoom(current_size, target_size):
     scale_w = target_size[0] / current_size[0]
     scale_h = target_size[1] / current_size[1]
@@ -114,7 +121,11 @@ def crop_box_right_bottom(current_size, target_size):
 
 def get_output_name(output_path: Path, input_name: str):
     p = Path(input_name)
-    return str(output_path.joinpath(f"{p.stem}-crop.jpg"))
+    if do_datetime_tag:
+        file_stem = f"{p.stem}-{dt_tag}"
+    else:
+        file_stem = f"{p.stem}-crop"
+    return str(output_path.joinpath(f"{file_stem}.jpg"))
 
 
 def get_args():
@@ -197,19 +208,15 @@ def main():
         )
         sys.exit(1)
 
-    # dt = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
-    dt = datetime.now().strftime("%Y%m%d_%H%M%S")
-
-    #  Save to a directory under the first image files's parent.
-    out_path = image_paths[0].parent / f"crop_{dt}"
-
-    assert not out_path.exists()
-
-    out_path.mkdir()
+    if do_new_subdir:
+        #  Save to a directory under the first image files's parent.
+        out_path = image_paths[0].parent / f"crop_{dt_tag}"
+        assert not out_path.exists()
+        out_path.mkdir()
+    else:
+        out_path = Path.cwd() / "output" / "crop_to_jpg"
 
     assert out_path.exists()
-
-    #  sys.exit(0)  # <-- stop here for now.
 
     for image_path in image_paths:
         print(f"Reading '{image_path}'")
@@ -224,20 +231,12 @@ def main():
         # crop_box = crop_box_center(img.size, target_size)
         # img = img.crop(crop_box)
 
-        # target_size = (1190, 980)
-        # crop_box = crop_box_left_top(img.size, target_size)
-        # img = img.crop(crop_box)
-
-        # target_size = (640, 960)
-        # crop_box = crop_box_right_top(img.size, target_size)
-        # img = img.crop(crop_box)
-
-        # target_size = (640, 855)
-        # crop_box = crop_box_left_bottom(img.size, target_size)
-        # img = img.crop(crop_box)
-
         for proc in proc_list:
-            if proc.startswith("crop_from_left_top"):
+            if proc.startswith("crop_from_center"):
+                target_size = get_target_size(proc)
+                crop_box = crop_box_center(img.size, target_size)
+                img = img.crop(crop_box)
+            elif proc.startswith("crop_from_left_top"):
                 target_size = get_target_size(proc)
                 crop_box = crop_box_left_top(img.size, target_size)
                 img = img.crop(crop_box)
@@ -263,7 +262,7 @@ def main():
         file_name = get_output_name(out_path, image_path)
         print(f"Saving '{file_name}'")
 
-        assert not Path(file_name).exists()
+        assert not (do_new_subdir and Path(file_name).exists())
 
         img.save(file_name)
 
