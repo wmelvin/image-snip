@@ -8,9 +8,6 @@ from pathlib import Path
 from PIL import Image
 
 
-dt_tag = datetime.now().strftime("%Y%m%d_%H%M%S")
-
-
 def get_new_size_zoom(current_size, target_size):
     scale_w = target_size[0] / current_size[0]
     scale_h = target_size[1] / current_size[1]
@@ -91,10 +88,12 @@ def crop_box_right_bottom(current_size, target_size):
     return (x1, y1, x2, y2)
 
 
-def get_output_name(output_path: Path, input_name: str, do_timestamp: bool):
+def get_output_name(output_path: Path, input_name: str, timestamp_mode: int):
     p = Path(input_name)
-    if do_timestamp:
-        file_stem = f"{p.stem}-{dt_tag}"
+    if timestamp_mode == 1:
+        file_stem = f"{p.stem}-{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+    elif timestamp_mode == 2:
+        file_stem = f"{p.stem}-{datetime.now().strftime('%Y%m%d_%H%M%S_%f')}"
     else:
         file_stem = f"{p.stem}-crop"
     return str(output_path.joinpath(f"{file_stem}.jpg"))
@@ -146,15 +145,15 @@ def get_args(argv):
     return ap.parse_args(argv[1:])
 
 
-def is_yes(s: str) -> bool:
-    if s is None:
-        return False
-    if len(s) == 0:
-        return False
-    #  The values 'True', 'Yes', 'Y', and '1' are considered a Yes.
-    #  Only the first character is checked, so any value starting
-    #  with one of those characters is taken as a Yes.
-    return s[0].lower() in ("t", "y", "1")
+# def is_yes(s: str) -> bool:
+#     if s is None:
+#         return False
+#     if len(s) == 0:
+#         return False
+#     #  The values 'True', 'Yes', 'Y', and '1' are considered a Yes.
+#     #  Only the first character is checked, so any value starting
+#     #  with one of those characters is taken as a Yes.
+#     return s[0].lower() in ("t", "y", "1")
 
 
 def get_opt_str(opt_line: str) -> str:
@@ -185,20 +184,20 @@ def get_opts(args):
     image_paths = []
     proc_list = []
     output_dir = ""
-    do_timestamp = False
+    timestamp_mode = 0
 
     error_list = []
     with open(opt_file, "r") as f:
         for line in f.readlines():
             s = line.strip().strip("'\"")
             if (0 < len(s)) and (not s.startswith("#")):
-                if s.startswith("crop_from_"):
+                if s.startswith("crop_") and s.endswith(")"):
                     #  Process instruction.
                     proc_list.append(s)
                 elif s.startswith("output_folder:"):
                     output_dir = get_opt_str(s)
-                elif s.startswith("timestamp:"):
-                    do_timestamp = is_yes(get_opt_str(s))
+                elif s.startswith("timestamp_mode:"):
+                    timestamp_mode = int(get_opt_str(s))
                 else:
                     #  Image file path.
                     p = Path(s).expanduser().resolve()
@@ -235,18 +234,19 @@ def get_opts(args):
             sys.exit(1)
         output_dir = str(p)
 
-    return (proc_list, image_paths, output_dir, do_timestamp)
+    return (proc_list, image_paths, output_dir, timestamp_mode)
 
 
 def main(argv):
     args = get_args(argv)
     # opt_file = get_opts(args)
 
-    proc_list, image_paths, output_dir, do_timestamp = get_opts(args)
+    proc_list, image_paths, output_dir, timestamp_mode = get_opts(args)
 
     if len(output_dir) == 0:
         #  Default to a new directory under the first image files's parent.
-        out_path = image_paths[0].parent / f"crop_{dt_tag}"
+        dt = datetime.now().strftime('%Y%m%d_%H%M%S')
+        out_path = image_paths[0].parent / f"crop_{dt}"
         assert not out_path.exists()
         out_path.mkdir()
     else:
@@ -285,6 +285,10 @@ def main(argv):
                 target_size = get_target_size(proc, img.size)
                 crop_box = crop_box_right_bottom(img.size, target_size)
                 img = img.crop(crop_box)
+            elif proc.startswith("crop_zoom("):
+                target_size = get_target_size(proc, img.size)
+                new_size = get_new_size_zoom(img.size, target_size)
+                img = img.resize(new_size)
             else:
                 sys.stderr.write(
                     "ERROR: Unknown process instruction in options file:\n"
@@ -292,13 +296,15 @@ def main(argv):
                 )
                 sys.exit(1)
 
-        file_name = get_output_name(out_path, image_path, do_timestamp)
+        file_name = get_output_name(out_path, image_path, timestamp_mode)
         print(f"Saving '{file_name}'")
 
         #  TODO: Overwrite option?
         assert not Path(file_name).exists()
 
         img.save(file_name)
+
+        return 0
 
 
 if __name__ == "__main__":
