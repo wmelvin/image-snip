@@ -8,10 +8,6 @@ from pathlib import Path
 from PIL import Image
 
 
-# do_new_subdir = False
-
-do_datetime_tag = True
-
 dt_tag = datetime.now().strftime("%Y%m%d_%H%M%S")
 
 
@@ -95,9 +91,9 @@ def crop_box_right_bottom(current_size, target_size):
     return (x1, y1, x2, y2)
 
 
-def get_output_name(output_path: Path, input_name: str):
+def get_output_name(output_path: Path, input_name: str, do_timestamp: bool):
     p = Path(input_name)
-    if do_datetime_tag:
+    if do_timestamp:
         file_stem = f"{p.stem}-{dt_tag}"
     else:
         file_stem = f"{p.stem}-crop"
@@ -163,10 +159,10 @@ def is_yes(s: str) -> bool:
 
 def get_opt_str(opt_line: str) -> str:
     """
-    Extracts the string to the left of the equals sign
-    in an option assignment.
+    Extracts the string to the left of the first colon in an option
+    assignment.
     """
-    a = opt_line.strip().split("=")
+    a = opt_line.strip().split(":", 1)
 
     # TODO: Replace with error check.
     assert len(a) == 2
@@ -189,6 +185,7 @@ def get_opts(args):
     image_paths = []
     proc_list = []
     output_dir = ""
+    do_timestamp = False
 
     error_list = []
     with open(opt_file, "r") as f:
@@ -198,8 +195,10 @@ def get_opts(args):
                 if s.startswith("crop_from_"):
                     #  Process instruction.
                     proc_list.append(s)
-                elif s.startswith("output_folder"):
+                elif s.startswith("output_folder:"):
                     output_dir = get_opt_str(s)
+                elif s.startswith("timestamp:"):
+                    do_timestamp = is_yes(get_opt_str(s))
                 else:
                     #  Image file path.
                     p = Path(s).expanduser().resolve()
@@ -236,14 +235,14 @@ def get_opts(args):
             sys.exit(1)
         output_dir = str(p)
 
-    return (proc_list, image_paths, output_dir)
+    return (proc_list, image_paths, output_dir, do_timestamp)
 
 
 def main(argv):
     args = get_args(argv)
     # opt_file = get_opts(args)
 
-    proc_list, image_paths, output_dir = get_opts(args)
+    proc_list, image_paths, output_dir, do_timestamp = get_opts(args)
 
     if len(output_dir) == 0:
         #  Default to a new directory under the first image files's parent.
@@ -293,7 +292,7 @@ def main(argv):
                 )
                 sys.exit(1)
 
-        file_name = get_output_name(out_path, image_path)
+        file_name = get_output_name(out_path, image_path, do_timestamp)
         print(f"Saving '{file_name}'")
 
         #  TODO: Overwrite option?
