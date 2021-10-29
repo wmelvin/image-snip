@@ -41,6 +41,8 @@ def crop_box_left_top(current_size, target_size):
     cur_w, cur_h = current_size
     trg_w, trg_h = target_size
 
+    #  TODO: Replace assertion with error message + sys.exit (or reduce target
+    #  to current dimension and show warning).
     assert trg_w <= cur_w
     assert trg_h <= cur_h
 
@@ -58,6 +60,8 @@ def crop_box_right_top(current_size, target_size):
     cur_w, cur_h = current_size
     trg_w, trg_h = target_size
 
+    #  TODO: Replace assertion with error message + sys.exit (or reduce target
+    #  to current dimension and show warning).
     assert trg_w <= cur_w
     assert trg_h <= cur_h
 
@@ -75,11 +79,32 @@ def crop_box_left_bottom(current_size, target_size):
     cur_w, cur_h = current_size
     trg_w, trg_h = target_size
 
+    #  TODO: Replace assertion with error message + sys.exit (or reduce target
+    #  to current dimension and show warning).
     assert trg_w <= cur_w
     assert trg_h <= cur_h
 
     x1 = 0
     x2 = trg_w
+
+    y1 = cur_h - trg_h
+    y2 = y1 + trg_h
+
+    return (x1, y1, x2, y2)
+
+
+def crop_box_right_bottom(current_size, target_size):
+    """Crop to target size from right-bottom."""
+    cur_w, cur_h = current_size
+    trg_w, trg_h = target_size
+
+    #  TODO: Replace assertion with error message + sys.exit (or reduce target
+    #  to current dimension and show warning).
+    assert trg_w <= cur_w
+    assert trg_h <= cur_h
+
+    x1 = cur_w - trg_w
+    x2 = cur_w
 
     y1 = cur_h - trg_h
     y2 = y1 + trg_h
@@ -223,6 +248,10 @@ def main():
             elif proc.startswith("crop_from_left_bottom("):
                 target_size = get_target_size(proc)
                 crop_box = crop_box_left_bottom(img.size, target_size)
+                img = img.crop(crop_box)
+            elif proc.startswith("crop_from_right_bottom("):
+                target_size = get_target_size(proc)
+                crop_box = crop_box_right_bottom(img.size, target_size)
                 img = img.crop(crop_box)
             else:
                 sys.stderr.write(
