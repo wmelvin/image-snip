@@ -8,7 +8,7 @@ from pathlib import Path
 from PIL import Image
 
 
-do_new_subdir = False
+# do_new_subdir = False
 
 do_datetime_tag = True
 
@@ -104,24 +104,6 @@ def get_output_name(output_path: Path, input_name: str):
     return str(output_path.joinpath(f"{file_stem}.jpg"))
 
 
-def get_args():
-    ap = argparse.ArgumentParser(
-        description="Crop images and save the cropped versions as .jpg files."
-    )
-
-    ap.add_argument(
-        "--options-file",
-        dest="opt_file",
-        action="store",
-        help="Name of file containing a list of process instructions and "
-        + "image file names, one per line.",
-    )
-
-    args = ap.parse_args()
-
-    return args.opt_file
-
-
 def extract_target_size(proc: str):
     """
     Extracts target size as a tuple of 2 integers from a string that ends with
@@ -152,9 +134,48 @@ def get_target_size(proc, current_size):
     return result
 
 
-def main():
-    opt_file = get_args()
+def get_args(argv):
+    ap = argparse.ArgumentParser(
+        description="Crop images and save the cropped versions as .jpg files."
+    )
 
+    ap.add_argument(
+        "--options-file",
+        dest="opt_file",
+        action="store",
+        help="Name of file containing a list of process instructions and "
+        + "image file names, one per line.",
+    )
+
+    return ap.parse_args(argv[1:])
+
+
+def is_yes(s: str) -> bool:
+    if s is None:
+        return False
+    if len(s) == 0:
+        return False
+    #  The values 'True', 'Yes', 'Y', and '1' are considered a Yes.
+    #  Only the first character is checked, so any value starting
+    #  with one of those characters is taken as a Yes.
+    return s[0].lower() in ("t", "y", "1")
+
+
+def get_opt_str(opt_line: str) -> str:
+    """
+    Extracts the string to the left of the equals sign
+    in an option assignment.
+    """
+    a = opt_line.strip().split("=")
+
+    # TODO: Replace with error check.
+    assert len(a) == 2
+
+    return a[1].strip()
+
+
+def get_opts(args):
+    opt_file = args.opt_file
     if opt_file is None:
         sys.stderr.write("ERROR: No options file specified.\n")
         sys.exit(1)
@@ -167,6 +188,8 @@ def main():
 
     image_paths = []
     proc_list = []
+    output_dir = ""
+
     error_list = []
     with open(opt_file, "r") as f:
         for line in f.readlines():
@@ -175,6 +198,8 @@ def main():
                 if s.startswith("crop_from_"):
                     #  Process instruction.
                     proc_list.append(s)
+                elif s.startswith("output_folder"):
+                    output_dir = get_opt_str(s)
                 else:
                     #  Image file path.
                     p = Path(s).expanduser().resolve()
@@ -202,13 +227,32 @@ def main():
         )
         sys.exit(1)
 
-    if do_new_subdir:
-        #  Save to a directory under the first image files's parent.
+    if 0 < len(output_dir):
+        p = Path(output_dir).expanduser().resolve()
+        if not p.exists():
+            sys.stderr.write(
+                "ERROR: Specified output_folder does not exist.\n"
+            )
+            sys.exit(1)
+        output_dir = str(p)
+
+    return (proc_list, image_paths, output_dir)
+
+
+def main(argv):
+    args = get_args(argv)
+    # opt_file = get_opts(args)
+
+    proc_list, image_paths, output_dir = get_opts(args)
+
+    if len(output_dir) == 0:
+        #  Default to a new directory under the first image files's parent.
         out_path = image_paths[0].parent / f"crop_{dt_tag}"
         assert not out_path.exists()
         out_path.mkdir()
     else:
-        out_path = Path.cwd() / "output" / "crop_to_jpg"
+        #  If output_dir is specified it must already exist.
+        out_path = Path(output_dir)
 
     assert out_path.exists()
 
@@ -220,10 +264,6 @@ def main():
         #  TODO:
         # new_size = get_new_size_zoom(img.size, target_size)
         # img = img.resize(new_size)
-
-        #  TODO:
-        # crop_box = crop_box_center(img.size, target_size)
-        # img = img.crop(crop_box)
 
         for proc in proc_list:
             if proc.startswith("crop_from_center"):
@@ -256,10 +296,11 @@ def main():
         file_name = get_output_name(out_path, image_path)
         print(f"Saving '{file_name}'")
 
-        assert not (do_new_subdir and Path(file_name).exists())
+        #  TODO: Overwrite option?
+        assert not Path(file_name).exists()
 
         img.save(file_name)
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main(sys.argv))
