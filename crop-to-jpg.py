@@ -47,18 +47,12 @@ def crop_box_left_top(current_size, target_size):
     """Crop to target size from left-top."""
     cur_w, cur_h = current_size
     trg_w, trg_h = target_size
-
-    #  TODO: Replace assertion with error message + sys.exit (or reduce target
-    #  to current dimension and show warning).
     assert trg_w <= cur_w
     assert trg_h <= cur_h
-
     x1 = 0
     x2 = trg_w
-
     y1 = 0
     y2 = trg_h
-
     return (x1, y1, x2, y2)
 
 
@@ -66,18 +60,12 @@ def crop_box_right_top(current_size, target_size):
     """Crop to target size from right-top."""
     cur_w, cur_h = current_size
     trg_w, trg_h = target_size
-
-    #  TODO: Replace assertion with error message + sys.exit (or reduce target
-    #  to current dimension and show warning).
     assert trg_w <= cur_w
     assert trg_h <= cur_h
-
     x1 = cur_w - trg_w
     x2 = cur_w
-
     y1 = 0
     y2 = y1 + trg_h
-
     return (x1, y1, x2, y2)
 
 
@@ -85,18 +73,12 @@ def crop_box_left_bottom(current_size, target_size):
     """Crop to target size from left-bottom."""
     cur_w, cur_h = current_size
     trg_w, trg_h = target_size
-
-    #  TODO: Replace assertion with error message + sys.exit (or reduce target
-    #  to current dimension and show warning).
     assert trg_w <= cur_w
     assert trg_h <= cur_h
-
     x1 = 0
     x2 = trg_w
-
     y1 = cur_h - trg_h
     y2 = y1 + trg_h
-
     return (x1, y1, x2, y2)
 
 
@@ -104,18 +86,12 @@ def crop_box_right_bottom(current_size, target_size):
     """Crop to target size from right-bottom."""
     cur_w, cur_h = current_size
     trg_w, trg_h = target_size
-
-    #  TODO: Replace assertion with error message + sys.exit (or reduce target
-    #  to current dimension and show warning).
     assert trg_w <= cur_w
     assert trg_h <= cur_h
-
     x1 = cur_w - trg_w
     x2 = cur_w
-
     y1 = cur_h - trg_h
     y2 = y1 + trg_h
-
     return (x1, y1, x2, y2)
 
 
@@ -146,7 +122,7 @@ def get_args():
     return args.opt_file
 
 
-def get_target_size(proc: str):
+def extract_target_size(proc: str):
     """
     Extracts target size as a tuple of 2 integers from a string that ends with
     two integers, in parantheses, separated by a comma.
@@ -156,6 +132,24 @@ def get_target_size(proc: str):
     b = a[1].split(",")
     assert len(b) == 2
     return (int(b[0]), int(b[1]))
+
+
+def get_target_size(proc, current_size):
+    width, height = extract_target_size(proc)
+    msg = ""
+    if current_size[0] < width:
+        msg += "\n  Current width is less than the specified target width."
+        width = current_size[0]
+    if current_size[1] < height:
+        msg += "\n  Current height is less than the specified target height."
+        height = current_size[1]
+    result = (width, height)
+    if 0 < len(msg):
+        print(f"WARNING: Target image size reduced from specified value.{msg}")
+        print(f"  Process instruction: {proc}")
+        print(f"  Current size: {current_size}")
+        print(f"  Adjusted target size: {result}")
+    return result
 
 
 def main():
@@ -233,23 +227,23 @@ def main():
 
         for proc in proc_list:
             if proc.startswith("crop_from_center"):
-                target_size = get_target_size(proc)
+                target_size = get_target_size(proc, img.size)
                 crop_box = crop_box_center(img.size, target_size)
                 img = img.crop(crop_box)
             elif proc.startswith("crop_from_left_top"):
-                target_size = get_target_size(proc)
+                target_size = get_target_size(proc, img.size)
                 crop_box = crop_box_left_top(img.size, target_size)
                 img = img.crop(crop_box)
             elif proc.startswith("crop_from_right_top("):
-                target_size = get_target_size(proc)
+                target_size = get_target_size(proc, img.size)
                 crop_box = crop_box_right_top(img.size, target_size)
                 img = img.crop(crop_box)
             elif proc.startswith("crop_from_left_bottom("):
-                target_size = get_target_size(proc)
+                target_size = get_target_size(proc, img.size)
                 crop_box = crop_box_left_bottom(img.size, target_size)
                 img = img.crop(crop_box)
             elif proc.startswith("crop_from_right_bottom("):
-                target_size = get_target_size(proc)
+                target_size = get_target_size(proc, img.size)
                 crop_box = crop_box_right_bottom(img.size, target_size)
                 img = img.crop(crop_box)
             else:
