@@ -195,8 +195,10 @@ def get_opts(args):
                     #  Process instruction.
                     proc_list.append(s)
                 elif s.startswith("output_folder:"):
+                    #  Output folder/directory option.
                     output_dir = get_opt_str(s)
                 elif s.startswith("timestamp_mode:"):
+                    #  Mode for adding a timestamp to the output file name.
                     timestamp_mode = int(get_opt_str(s))
                 else:
                     #  Image file path.
