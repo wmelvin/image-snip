@@ -129,6 +129,33 @@ def get_target_size(proc, current_size):
     return result
 
 
+def extract_target_box(proc: str):
+    """
+    Extracts target box as a tuple of 4 integers from a string that ends with
+    four integers, in parantheses, separated by a comma.
+    """
+    a = proc.strip(")").split("(")
+    assert len(a) == 2
+    b = a[1].split(",")
+    assert len(b) == 4
+    return (int(b[0]), int(b[1]), int(b[2]), int(b[3]))
+
+
+def get_target_box(proc, current_size):
+    x1, y1, x2, y2 = extract_target_box(proc)
+
+    #  TODO: Replace with error checks, or automatic limits with warning
+    #  when applied?
+    assert x1 < current_size[0]
+    assert y1 < current_size[1]
+    assert x2 < current_size[0]
+    assert y2 < current_size[1]
+    assert x1 < x2
+    assert y1 < y2
+
+    return (x1, y1, x2, y2)
+
+
 def get_args(argv):
     ap = argparse.ArgumentParser(
         description="Crop images and save the cropped versions as .jpg files."
@@ -145,17 +172,6 @@ def get_args(argv):
     return ap.parse_args(argv[1:])
 
 
-# def is_yes(s: str) -> bool:
-#     if s is None:
-#         return False
-#     if len(s) == 0:
-#         return False
-#     #  The values 'True', 'Yes', 'Y', and '1' are considered a Yes.
-#     #  Only the first character is checked, so any value starting
-#     #  with one of those characters is taken as a Yes.
-#     return s[0].lower() in ("t", "y", "1")
-
-
 def get_opt_str(opt_line: str) -> str:
     """
     Extracts the string to the left of the first colon in an option
@@ -163,7 +179,7 @@ def get_opt_str(opt_line: str) -> str:
     """
     a = opt_line.strip().split(":", 1)
 
-    # TODO: Replace with error check.
+    #  TODO: Replace with error check.
     assert len(a) == 2
 
     return a[1].strip()
@@ -262,35 +278,41 @@ def main(argv):
 
         img = Image.open(image_path)
 
-        #  TODO:
-        # new_size = get_new_size_zoom(img.size, target_size)
-        # img = img.resize(new_size)
-
         for proc in proc_list:
             if proc.startswith("crop_from_center"):
                 target_size = get_target_size(proc, img.size)
                 crop_box = crop_box_center(img.size, target_size)
                 img = img.crop(crop_box)
+
             elif proc.startswith("crop_from_left_top"):
                 target_size = get_target_size(proc, img.size)
                 crop_box = crop_box_left_top(img.size, target_size)
                 img = img.crop(crop_box)
+
             elif proc.startswith("crop_from_right_top("):
                 target_size = get_target_size(proc, img.size)
                 crop_box = crop_box_right_top(img.size, target_size)
                 img = img.crop(crop_box)
+
             elif proc.startswith("crop_from_left_bottom("):
                 target_size = get_target_size(proc, img.size)
                 crop_box = crop_box_left_bottom(img.size, target_size)
                 img = img.crop(crop_box)
+
             elif proc.startswith("crop_from_right_bottom("):
                 target_size = get_target_size(proc, img.size)
                 crop_box = crop_box_right_bottom(img.size, target_size)
                 img = img.crop(crop_box)
+
             elif proc.startswith("crop_zoom("):
                 target_size = get_target_size(proc, img.size)
                 new_size = get_new_size_zoom(img.size, target_size)
                 img = img.resize(new_size)
+
+            elif proc.startswith("crop_to_box("):
+                crop_box = get_target_box(proc, img.size)
+                img = img.crop(crop_box)
+
             else:
                 sys.stderr.write(
                     "ERROR: Unknown process instruction in options file:\n"
