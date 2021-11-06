@@ -9,6 +9,10 @@ from PIL import Image
 
 
 def get_new_size_zoom(current_size, target_size):
+    """
+    Returns size (width, height) to scale image so
+    smallest dimension fits target size.
+    """
     scale_w = target_size[0] / current_size[0]
     scale_h = target_size[1] / current_size[1]
     scale_by = max(scale_w, scale_h)
@@ -16,6 +20,10 @@ def get_new_size_zoom(current_size, target_size):
 
 
 def crop_box_center(current_size, target_size):
+    """
+    Returns box coordinates (x1, y1, x2, y2) to
+    crop image to target size from center.
+    """
     cur_w, cur_h = current_size
     trg_w, trg_h = target_size
 
@@ -37,7 +45,10 @@ def crop_box_center(current_size, target_size):
 
 
 def crop_box_left_top(current_size, target_size):
-    """Crop to target size from left-top."""
+    """
+    Returns box coordinates (x1, y1, x2, y2) to
+    crop image to target size from left-top.
+    """
     cur_w, cur_h = current_size
     trg_w, trg_h = target_size
     assert trg_w <= cur_w
@@ -50,7 +61,10 @@ def crop_box_left_top(current_size, target_size):
 
 
 def crop_box_right_top(current_size, target_size):
-    """Crop to target size from right-top."""
+    """
+    Returns box coordinates (x1, y1, x2, y2) to
+    crop image to target size from right-top.
+    """
     cur_w, cur_h = current_size
     trg_w, trg_h = target_size
     assert trg_w <= cur_w
@@ -63,7 +77,10 @@ def crop_box_right_top(current_size, target_size):
 
 
 def crop_box_left_bottom(current_size, target_size):
-    """Crop to target size from left-bottom."""
+    """
+    Returns box coordinates (x1, y1, x2, y2) to
+    crop image to target size from left-bottom.
+    """
     cur_w, cur_h = current_size
     trg_w, trg_h = target_size
     assert trg_w <= cur_w
@@ -76,7 +93,10 @@ def crop_box_left_bottom(current_size, target_size):
 
 
 def crop_box_right_bottom(current_size, target_size):
-    """Crop to target size from right-bottom."""
+    """
+    Returns box coordinates (x1, y1, x2, y2) to
+    crop image to target size from right-bottom.
+    """
     cur_w, cur_h = current_size
     trg_w, trg_h = target_size
     assert trg_w <= cur_w
@@ -89,6 +109,18 @@ def crop_box_right_bottom(current_size, target_size):
 
 
 def get_output_name(output_path: Path, input_name: str, timestamp_mode: int):
+    """
+    Returns the full path for the output file based on the name of the source
+    image file.
+
+    A date_time tag is added to the file name depending on timestamp_mode:
+      1 = Add date_time to the second.
+      2 = Add date_time to the microsecond.
+
+    Otherwise, "-crop" is appended to the source file name.
+
+    Output files are .jpg format.
+    """
     p = Path(input_name)
     if timestamp_mode == 1:
         file_stem = f"{p.stem}-{datetime.now().strftime('%Y%m%d_%H%M%S')}"
@@ -101,8 +133,9 @@ def get_output_name(output_path: Path, input_name: str, timestamp_mode: int):
 
 def extract_target_size(proc: str):
     """
-    Extracts target size as a tuple of 2 integers from a string that ends with
-    two integers, in parantheses, separated by a comma.
+    Extracts target size as a tuple of 2 integers (width, height) from
+    a string that ends with two integers, in parantheses, separated by
+    a comma.
     """
     a = proc.strip(")").split("(")
     assert len(a) == 2
@@ -131,8 +164,9 @@ def get_target_size(proc, current_size):
 
 def extract_target_box(proc: str):
     """
-    Extracts target box as a tuple of 4 integers from a string that ends with
-    four integers, in parantheses, separated by a comma.
+    Extracts target box as a tuple of 4 integers (x1, y1, x2, y2) from
+    a string that ends with four integers, in parantheses, separated
+    by a comma.
     """
     a = proc.strip(")").split("(")
     assert len(a) == 2
