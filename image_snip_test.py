@@ -1,5 +1,6 @@
 import shutil
 
+from datetime import datetime
 from pathlib import Path
 from PIL import Image
 from textwrap import dedent
@@ -26,21 +27,24 @@ def options_file_with_proc(opt_path, process_instruction):
 
 
 def options_file_with_proc_and_image(
-    opt_path, process_instruction, image_name
+    opt_path: Path, process_instruction: str, image_tag: str
 ):
     """
-    Returns (options_file_path, test_image_path).
+    Returns (options_file_path, expected_test_image_path).
     """
     d = opt_path / "testopts"
     d.mkdir()
 
     #  Make a copy of the test image.
+    test_image_name = (
+        f"test-{image_tag}-{datetime.now().strftime('%Y%m%d_%H%M%S_%f')}.jpg"
+    )
     src = Path("./images/test-1920x1440.jpg")
-    dst = d / image_name
+    dst = d / test_image_name
     shutil.copyfile(src, dst)
 
-    p = d / "test-options.txt"
-    p.write_text(
+    opt_file = d / "test-options.txt"
+    opt_file.write_text(
         dedent(
             """
             output_folder: ./output/tests
@@ -50,8 +54,11 @@ def options_file_with_proc_and_image(
             """
         ).format(process_instruction, dst)
     )
-    assert p.exists()
-    return (p, dst)
+    assert opt_file.exists()
+
+    expect_image = Path("./output/tests") / f"{dst.stem}-crop.jpg"
+
+    return (opt_file, expect_image)
 
 
 def test_crop_to_box(tmp_path):
@@ -64,15 +71,15 @@ def test_crop_to_box(tmp_path):
 
 def test_crop_larger_than_source(tmp_path):
     """Test specifying cropped size larger than the source image size."""
-    opt_path, img_path = options_file_with_proc_and_image(
-        tmp_path, "crop_from_left_top(2000, 1800)", "test-larger.jpg"
+    opt_path, expect_image = options_file_with_proc_and_image(
+        tmp_path, "crop_from_left_top(2000, 1800)", "larger"
     )
     args = ["image_snip.py", "--options-file", str(opt_path)]
     result = image_snip.main(args)
     assert result == 0
     # Should keep source image size, not scale to larger size.
-    expected_size = (1920, 1440)  
-    assert Image.open(img_path).size == expected_size
+    expected_size = (1920, 1440)
+    assert Image.open(expect_image).size == expected_size
 
 
 def test_crop_zoom(tmp_path):
