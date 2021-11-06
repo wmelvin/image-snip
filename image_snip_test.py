@@ -1,4 +1,7 @@
+import shutil
 
+from pathlib import Path
+from PIL import Image
 from textwrap import dedent
 
 import image_snip
@@ -22,6 +25,35 @@ def options_file_with_proc(opt_path, process_instruction):
     return p
 
 
+def options_file_with_proc_and_image(
+    opt_path, process_instruction, image_name
+):
+    """
+    Returns (options_file_path, test_image_path).
+    """
+    d = opt_path / "testopts"
+    d.mkdir()
+
+    #  Make a copy of the test image.
+    src = Path("./images/test-1920x1440.jpg")
+    dst = d / image_name
+    shutil.copyfile(src, dst)
+
+    p = d / "test-options.txt"
+    p.write_text(
+        dedent(
+            """
+            output_folder: ./output/tests
+            # timestamp_mode:
+            {0}
+            {1}
+            """
+        ).format(process_instruction, dst)
+    )
+    assert p.exists()
+    return (p, dst)
+
+
 def test_crop_to_box(tmp_path):
     """Test crop_to_box(x1, y1, x2, y2)."""
     p = options_file_with_proc(tmp_path, "crop_to_box(200, 100, 900, 500)")
@@ -32,10 +64,15 @@ def test_crop_to_box(tmp_path):
 
 def test_crop_larger_than_source(tmp_path):
     """Test specifying cropped size larger than the source image size."""
-    p = options_file_with_proc(tmp_path, "crop_from_left_top(2000, 1800)")
-    args = ["image_snip.py", "--options-file", str(p)]
+    opt_path, img_path = options_file_with_proc_and_image(
+        tmp_path, "crop_from_left_top(2000, 1800)", "test-larger.jpg"
+    )
+    args = ["image_snip.py", "--options-file", str(opt_path)]
     result = image_snip.main(args)
     assert result == 0
+    # Should keep source image size, not scale to larger size.
+    expected_size = (1920, 1440)  
+    assert Image.open(img_path).size == expected_size
 
 
 def test_crop_zoom(tmp_path):
