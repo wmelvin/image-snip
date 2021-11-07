@@ -342,6 +342,9 @@ def main(argv):
                 target_size = get_target_size(proc, img.size)
                 new_size = get_new_size_zoom(img.size, target_size)
                 img = img.resize(new_size)
+                target_size = get_target_size(proc, img.size)
+                crop_box = crop_box_center(img.size, target_size)
+                img = img.crop(crop_box)
 
             elif proc.startswith("crop_to_box("):
                 crop_box = get_target_box(proc, img.size)
