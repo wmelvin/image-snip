@@ -291,7 +291,6 @@ def get_opts(args):
 
 def main(argv):
     args = get_args(argv)
-    # opt_file = get_opts(args)
 
     proc_list, image_paths, output_dir, timestamp_mode = get_opts(args)
 
