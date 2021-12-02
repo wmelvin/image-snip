@@ -4,7 +4,7 @@
 
 This Python program evolved (a little) from a one-off utility script used to process batches of images where the same areas were cropped. The original script started with hard-coded paths. Later an *options file* was added so the a set of operations could be applied to different sets of image files.
 
-This is a simple application of Python and [Pillow](https://python-pillow.org/). There are other, more powerful options, such as [Automating GIMP](https://www.gimp.org/tutorials/Automate_Editing_in_GIMP/).
+This is a simple application of Python and [Pillow](https://python-pillow.org/). There are other, more powerful, options such as [Automating GIMP](https://www.gimp.org/tutorials/Automate_Editing_in_GIMP/).
 
 
 ## Options File ##
@@ -18,29 +18,30 @@ Any line starting with a pound sign (**#**) is treated as a **comment**. Only wh
 
 The following **Settings** can be specified in the options file:
 
-`output_folder: path`
-Save the modified images to the given folder path.
+Save the modified images to the given folder path:
+- `output_folder: path`
 
-`timestamp_mode: [n]`
 Add a *date_time* tag to the output file name. The setting value specifies the resolution of the time part:
-`1` = Add *date_time* to the second.
-`2` = Add *date_time* to the microsecond.
-Otherwise, the output file is named with "*-crop*" appended to the source file name.
+- `timestamp_mode: [n]`
+  - `1` = Add *date_time* to the second.
+  - `2` = Add *date_time* to the microsecond.
+
+If no *timestamp_mode* is specified, the output file is named with "*-crop*" appended to the source file name.
 
 The following **Process Instructions** can be specified in the options file:
 
-`crop_from_center(width, height)`
-`crop_from_left_bottom(width, height)`
-`crop_from_left_top(width, height)`
-`crop_from_right_bottom(width, height)`
-`crop_from_right_top(width, height)`
-These crop the image to the given *width* and *height* (in pixels) starting from the corner (or center) as stated in the instruction's name.
+These crop the image to the given *width* and *height* (in pixels) starting from the corner (or center) as stated in the instruction's name:
+- `crop_from_center(width, height)`
+- `crop_from_left_bottom(width, height)`
+- `crop_from_left_top(width, height)`
+- `crop_from_right_bottom(width, height)`
+- `crop_from_right_top(width, height)`
 
-`crop_to_box(x1, y1, x2, y2)`
-Crop from any part of the image using the given [box coordinates](https://pillow.readthedocs.io/en/stable/handbook/concepts.html#coordinate-system).
+Crop from any part of the image using the given [box coordinates](https://pillow.readthedocs.io/en/stable/handbook/concepts.html#coordinate-system):
+- `crop_to_box(x1, y1, x2, y2)`
 
-`crop_zoom(width, height)`
-Resize (zoom) the image to fill the entire target area, then crop to the given *width* and *height*.
+Resize (zoom) the image to fill the entire target area, then crop to the given *width* and *height*:
+- `crop_zoom(width, height)`
 
 
 **Example options file:**
