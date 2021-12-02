@@ -134,7 +134,7 @@ def get_output_name(output_path: Path, input_name: str, timestamp_mode: int):
 def extract_target_size(proc: str):
     """
     Extracts target size as a tuple of 2 integers (width, height) from
-    a string that ends with two integers, in parantheses, separated by
+    a string that ends with two integers, in parentheses, separated by
     a comma.
     """
     a = proc.strip(")").split("(")
@@ -165,7 +165,7 @@ def get_target_size(proc, current_size):
 def extract_target_box(proc: str):
     """
     Extracts target box as a tuple of 4 integers (x1, y1, x2, y2) from
-    a string that ends with four integers, in parantheses, separated
+    a string that ends with four integers, in parentheses, separated
     by a comma.
     """
     a = proc.strip(")").split("(")
