@@ -8,7 +8,7 @@ from textwrap import dedent
 import image_snip
 
 
-test_source_image = Path("./images/test-1920x1440.jpg")
+test_source_image = Path("./images/example-1-1920x1440.jpg")
 
 
 def get_test_opts_and_img(
@@ -57,6 +57,8 @@ def test_crop_to_box(tmp_path):
     args = ["image_snip.py", "--options-file", str(opt)]
     result = image_snip.main(args)
     assert result == 0
+    expected_size = (700, 400)
+    assert Image.open(img).size == expected_size
 
 
 def test_crop_larger_than_source(tmp_path):
