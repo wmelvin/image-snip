@@ -309,7 +309,11 @@ def main(argv):
     for image_path in image_paths:
         print(f"Reading '{image_path}'")
 
-        img = Image.open(image_path)
+        src = Image.open(image_path)
+
+        img = Image.new("RGB", src.size)
+
+        img.paste(src, (0, 0))
 
         for proc in proc_list:
             if proc.startswith("crop_from_center"):
@@ -364,7 +368,7 @@ def main(argv):
 
         img.save(file_name)
 
-        return 0
+    return 0
 
 
 if __name__ == "__main__":
