@@ -67,13 +67,14 @@ The set of one or more *process instructions* are applied to each image listed i
 ## Command Line Help/Usage ##
 
 ```
-usage: image_snip.py [-h] [--options-file OPT_FILE]
+usage: image_snip.py [-h] opt_file
 
 Crop images and save the cropped versions as .jpg files.
 
+positional arguments:
+  opt_file    Name of 'options file' containing a list of process instructions
+              and image file names, one per line.
+
 optional arguments:
-  -h, --help            show this help message and exit
-  --options-file OPT_FILE
-                        Name of file containing a list of process instructions
-                        and image file names, one per line.
+  -h, --help  show this help message and exit
 ```

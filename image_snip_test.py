@@ -54,7 +54,7 @@ def test_crop_to_box(tmp_path):
     opt, img = get_test_opts_and_img(
         tmp_path, "crop_to_box(200, 100, 900, 500)", "crop_to_box"
     )
-    args = ["image_snip.py", "--options-file", str(opt)]
+    args = ["image_snip.py", str(opt)]
     result = image_snip.main(args)
     assert result == 0
     expected_size = (700, 400)
@@ -66,7 +66,7 @@ def test_crop_larger_than_source(tmp_path):
     opt, img = get_test_opts_and_img(
         tmp_path, "crop_from_left_top(2000, 1800)", "larger"
     )
-    args = ["image_snip.py", "--options-file", str(opt)]
+    args = ["image_snip.py", str(opt)]
     result = image_snip.main(args)
     assert result == 0
     # Should keep source image size, not scale to larger size.
@@ -76,7 +76,7 @@ def test_crop_larger_than_source(tmp_path):
 
 def test_crop_zoom(tmp_path):
     opt, img = get_test_opts_and_img(tmp_path, "crop_zoom(800, 800)", "zoom")
-    args = ["image_snip.py", "--options-file", str(opt)]
+    args = ["image_snip.py", str(opt)]
     result = image_snip.main(args)
     assert result == 0
     expected_size = (800, 800)
@@ -87,7 +87,7 @@ def test_crop_center(tmp_path):
     opt, img = get_test_opts_and_img(
         tmp_path, "crop_from_center(1024, 768)", "center"
     )
-    args = ["image_snip.py", "--options-file", str(opt)]
+    args = ["image_snip.py", str(opt)]
     result = image_snip.main(args)
     assert result == 0
     expected_size = (1024, 768)
@@ -98,7 +98,7 @@ def test_crop_left_top(tmp_path):
     opt, img = get_test_opts_and_img(
         tmp_path, "crop_from_left_top(640, 480)", "left_top"
     )
-    args = ["image_snip.py", "--options-file", str(opt)]
+    args = ["image_snip.py", str(opt)]
     result = image_snip.main(args)
     assert result == 0
     expected_size = (640, 480)
@@ -109,7 +109,7 @@ def test_crop_right_top(tmp_path):
     opt, img = get_test_opts_and_img(
         tmp_path, "crop_from_right_top(640, 480)", "right_top"
     )
-    args = ["image_snip.py", "--options-file", str(opt)]
+    args = ["image_snip.py", str(opt)]
     result = image_snip.main(args)
     assert result == 0
     expected_size = (640, 480)
@@ -120,7 +120,7 @@ def test_crop_left_bottom(tmp_path):
     opt, img = get_test_opts_and_img(
         tmp_path, "crop_from_left_bottom(640, 480)", "left_bottom"
     )
-    args = ["image_snip.py", "--options-file", str(opt)]
+    args = ["image_snip.py", str(opt)]
     result = image_snip.main(args)
     assert result == 0
     expected_size = (640, 480)
@@ -131,7 +131,7 @@ def test_crop_right_bottom(tmp_path):
     opt, img = get_test_opts_and_img(
         tmp_path, "crop_from_right_bottom(640, 480)", "right_bottom"
     )
-    args = ["image_snip.py", "--options-file", str(opt)]
+    args = ["image_snip.py", str(opt)]
     result = image_snip.main(args)
     assert result == 0
     expected_size = (640, 480)
@@ -162,11 +162,6 @@ def test_options(tmp_path):
     )
     assert p.exists()
 
-    args = [
-        "image_snip.py",
-        "--options-file",
-        str(p),
-    ]
-
+    args = ["image_snip.py", str(p)]
     result = image_snip.main(args)
     assert result == 0

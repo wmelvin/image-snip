@@ -8,6 +8,13 @@ from pathlib import Path
 from PIL import Image
 
 
+app_version = "211227.1"
+
+pub_version = "0.1.dev1"
+
+app_label = f"image_snip.py version {pub_version} (mod {app_version})"
+
+
 def get_new_size_zoom(current_size, target_size):
     """
     Returns size (width, height) to scale image so
@@ -196,11 +203,10 @@ def get_args(argv):
     )
 
     ap.add_argument(
-        "--options-file",
-        dest="opt_file",
+        "opt_file",
         action="store",
-        help="Name of file containing a list of process instructions and "
-        + "image file names, one per line.",
+        help="Name of 'options file' containing a list of process "
+        + "instructions and image file names, one per line.",
     )
 
     return ap.parse_args(argv[1:])
@@ -290,6 +296,8 @@ def get_opts(args):
 
 
 def main(argv):
+    print(f"\n{app_label}\n")
+
     args = get_args(argv)
 
     proc_list, image_paths, output_dir, timestamp_mode = get_opts(args)
