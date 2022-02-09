@@ -1,4 +1,4 @@
 black
 flake8
-pillow
 pytest
+-r requirements.txt
