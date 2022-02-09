@@ -450,10 +450,6 @@ def main(argv):
                 crop_box = get_target_box(proc, img.size)
                 img = img.crop(crop_box)
 
-            elif proc.startswith("crop_to_box("):
-                crop_box = get_target_box(proc, img.size)
-                img = img.crop(crop_box)
-
             else:
                 sys.stderr.write(
                     "ERROR: Unknown process instruction in options file:\n"
