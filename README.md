@@ -43,6 +43,9 @@ Crop from any part of the image using the given [box coordinates](https://pillow
 Resize (zoom) the image to fill the entire target area, then crop to the given *width* and *height*:
 - `crop_zoom(width, height)`
 
+Create an animated GIF using all images with the given display *duration* (in milliseconds) for each frame. The GIF file is created after all other instructions have been applied to the list of images, and the modified versions of those images have been saved. It is given the same file name as the last image in the list but with a *.gif* extension.
+- `animated_gif(duration)`
+
 
 **Example options file:**
 
@@ -64,17 +67,35 @@ Resize (zoom) the image to fill the entire target area, then crop to the given *
 The set of one or more *process instructions* are applied to each image listed in the options file. The example above has only one image, but the original use-case for this tool had many images to which the same operations were applied. Also, the series of process instructions is just an example of combining multiple instructions. It is not a useful combination. In practice, only one or two operations are needed (perhaps one kind of *crop* and maybe a *zoom*).
 
 
+**Example including animated GIF:**
+
+```
+output_folder: ./output
+
+crop_to_box(416, 90, 1370, 530)
+
+# Make an animated GIF with frame duration of 2 seconds (2000 ms).
+
+animated_gif(2000)
+
+~/Pictures/screenshot-220207_132358.jpg
+~/Pictures/screenshot-220207_132400.jpg
+~/Pictures/screenshot-220207_132402.jpg
+```
+
 ## Command Line Help/Usage ##
 
 ```
-usage: image_snip.py [-h] opt_file
+usage: image_snip.py [-h] [--overwrite] opt_file
 
 Crop images and save the cropped versions as .jpg files.
 
 positional arguments:
-  opt_file    Name of 'options file' containing a list of process instructions
-              and image file names, one per line.
+  opt_file     Name of 'options file' containing a list of process
+               instructions and image file names, one per line.
 
 optional arguments:
-  -h, --help  show this help message and exit
+  -h, --help   show this help message and exit
+  --overwrite  Overwrite existing output files. By default, existing files are
+               not replaced.
 ```
