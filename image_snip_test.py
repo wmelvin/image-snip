@@ -10,6 +10,10 @@ import image_snip
 
 test_source_image = Path("./images/example-1-1920x1440.jpg")
 
+test_source_image_2 = Path("./images/example-2-400x400.jpg")
+test_source_image_3 = Path("./images/example-3-400x400.jpg")
+test_source_image_4 = Path("./images/example-4-400x400.jpg")
+
 
 def get_test_opts_and_img(
     opt_path: Path, process_instruction: str, image_tag: str
@@ -58,6 +62,18 @@ def test_crop_to_box(tmp_path):
     result = image_snip.main(args)
     assert result == 0
     expected_size = (700, 400)
+    assert Image.open(img).size == expected_size
+
+
+def test_crop_to_box_same_size(tmp_path):
+    """Test crop_to_box where box is same size as source image."""
+    opt, img = get_test_opts_and_img(
+        tmp_path, "crop_to_box(0, 0, 1920, 1440)", "crop_to_box"
+    )
+    args = ["image_snip.py", str(opt)]
+    result = image_snip.main(args)
+    assert result == 0
+    expected_size = (1920, 1440)
     assert Image.open(img).size == expected_size
 
 
@@ -159,6 +175,68 @@ def test_options(tmp_path):
             {0}
             """
         ).format(test_source_image)
+    )
+    assert p.exists()
+
+    args = ["image_snip.py", str(p)]
+    result = image_snip.main(args)
+    assert result == 0
+
+
+def test_animated_gif(tmp_path):
+    d = tmp_path / "testopts"
+    d.mkdir()
+    p = d / "test-animated-gif.txt"
+    p.write_text(
+        dedent(
+            """
+            #  test-animated-gif
+            output_folder: ./output/tests
+            timestamp_mode: 2
+
+            crop_from_left_top(300, 300)
+
+            animated_gif(2000)
+
+            {0}
+            {1}
+            {2}
+            """
+        ).format(
+            test_source_image_2,
+            test_source_image_3,
+            test_source_image_4
+        )
+    )
+    assert p.exists()
+
+    args = ["image_snip.py", str(p)]
+    result = image_snip.main(args)
+    assert result == 0
+
+
+def test_animated_gif_only(tmp_path):
+    d = tmp_path / "testopts"
+    d.mkdir()
+    p = d / "test-animated-gif-only.txt"
+    p.write_text(
+        dedent(
+            """
+            #  test-animated-gif-only
+            output_folder: ./output/tests
+            timestamp_mode: 2
+
+            animated_gif(2000)
+
+            {0}
+            {1}
+            {2}
+            """
+        ).format(
+            test_source_image_2,
+            test_source_image_3,
+            test_source_image_4
+        )
     )
     assert p.exists()
 
