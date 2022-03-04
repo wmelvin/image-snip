@@ -86,9 +86,11 @@ animated_gif(2000)
 ## Command Line Help/Usage ##
 
 ```
-usage: image_snip.py [-h] [--overwrite] opt_file
+usage: image_snip.py [-h] [--overwrite] [--template] opt_file
 
-Crop images and save the cropped versions as .jpg files.
+Modifies images (crop, resize, and more) and saves the modified versions as
+.jpg files. An options (plain text) file is required to specify the process
+instructions and list of image files.
 
 positional arguments:
   opt_file     Name of 'options file' containing a list of process
@@ -98,4 +100,7 @@ optional arguments:
   -h, --help   show this help message and exit
   --overwrite  Overwrite existing output files. By default, existing files are
                not replaced.
+  --template   Write available options, as comment lines, to the specified
+               options file to use as a template. If the file already exists
+               the template comments are appended to the file.
 ```

@@ -8,9 +8,10 @@ from collections import namedtuple
 from datetime import datetime
 from pathlib import Path
 from PIL import Image
+from textwrap import dedent
 
 
-app_version = "220222.1"
+app_version = "220304.1"
 
 pub_version = "0.1.dev1"
 
@@ -234,7 +235,10 @@ def get_target_box(proc, current_size):
 
 def get_args(argv):
     ap = argparse.ArgumentParser(
-        description="Crop images and save the cropped versions as .jpg files."
+        description="Modifies images (crop, resize, and more) and saves the "
+        + "modified versions as .jpg files. An options (plain text) file is "
+        + "required to specify the process instructions and list of image "
+        + "files."
     )
 
     ap.add_argument(
@@ -252,7 +256,54 @@ def get_args(argv):
         + "not replaced.",
     )
 
+    ap.add_argument(
+        "--template",
+        dest="do_template",
+        action="store_true",
+        help="Write available options, as comment lines, to the specified "
+        + "options file to use as a template. If the file already exists "
+        + "the template comments are appended to the file.",
+    )
+
     return ap.parse_args(argv[1:])
+
+
+def write_template_lines(file_path):
+    print(f"Writing template lines to '{file_path}'")
+    with open(file_path, "a") as f:
+        f.write(
+            dedent(
+                """
+                    #--- Available options:
+
+                    # output_folder:
+
+                    # timestamp_mode:
+                        # 1 = Add date_time to file name, to the second.
+                        # 2 = Add date_time to file name, to the microsecond.
+
+                    #--- Available process instructions:
+
+                    # crop_from_left_top(width, height)
+
+                    # crop_from_right_top(width, height)
+
+                    # crop_from_left_bottom(width, height)
+
+                    # crop_from_right_bottom(width, height)
+
+                    # crop_from_center(width, height)
+
+                    # crop_to_box(x1, y1, x2, y2)
+
+                    # crop_zoom(width, height)
+
+                    # animated_gif(duration_milliseconds)
+
+                    #--- Put list of image files below, one per line:
+                """
+            )
+    )
 
 
 def get_opt_str(opt_line: str) -> str:
@@ -273,6 +324,10 @@ def get_opts(args) -> AppOptions:
     if opt_file is None:
         sys.stderr.write("ERROR: No options file specified.\n")
         sys.exit(1)
+
+    if args.do_template:
+        write_template_lines(opt_file)
+        return None
 
     if not Path(opt_file).exists():
         sys.stderr.write(f"ERROR: File not found: '{opt_file}'\n")
@@ -407,6 +462,10 @@ def main(argv):
     args = get_args(argv)
 
     opts = get_opts(args)
+
+    if opts is None:
+        #  Is None if write_template_lines was called.
+        return 0
 
     if len(opts.output_dir) == 0:
         #  Default to a new directory under the first image files's parent.
