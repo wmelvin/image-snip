@@ -10,7 +10,7 @@ from pathlib import Path
 from PIL import Image
 
 
-app_version = "220209.1"
+app_version = "220222.1"
 
 pub_version = "0.1.dev1"
 
@@ -204,14 +204,30 @@ def extract_target_box(proc: str):
 def get_target_box(proc, current_size):
     x1, y1, x2, y2 = extract_target_box(proc)
 
-    #  TODO: Replace with error checks, or automatic limits with warning
-    #  when applied?
-    assert x1 < current_size[0]
-    assert y1 < current_size[1]
-    assert x2 < current_size[0]
-    assert y2 < current_size[1]
-    assert x1 < x2
-    assert y1 < y2
+    if (x2 < x1) or (y2 < y1):
+        sys.stderr.write("ERROR: Invalid box coordinates.\n")
+        sys.stderr.write(f"  {proc}\n")
+        sys.exit(1)
+
+    adjusted = False
+    if current_size[0] < x1:
+        x1 = current_size[0]
+        adjusted = True
+
+    if current_size[1] < y1:
+        y1 = current_size[1]
+        adjusted = True
+
+    if current_size[0] < x2:
+        x2 = current_size[0]
+        adjusted = True
+
+    if current_size[1] < y2:
+        y2 = current_size[1]
+        adjusted = True
+
+    if adjusted:
+        print("Warning: Box coordinates adjusted to fit image size.")
 
     return (x1, y1, x2, y2)
 
@@ -307,7 +323,7 @@ def get_opts(args) -> AppOptions:
         )
         sys.exit(1)
 
-    if len(proc_list) == 0:
+    if len(proc_list) == 0 and gif_ms == 0:
         sys.stderr.write(
             "ERROR: Options file did not contain any process "
             + "instructions.\n"
@@ -335,11 +351,15 @@ def get_opts(args) -> AppOptions:
     return opts
 
 
-def make_gif(gif_ms, image_list):
-    #  Use the last file in the list as the basis for the animated GIF
+def make_gif(gif_ms, image_list, out_path):
+    # #  Use the last file in the list as the basis for the animated GIF
+    # #  file name.
+    # last_file = Path(image_list[-1])
+
+    #  Use the first file in the list as the basis for the animated GIF
     #  file name.
-    last_file = image_list[-1]
-    gif_path = Path(last_file).with_suffix(".gif")
+    p = Path(image_list[0])
+    gif_path = (out_path / f"zgif-{p.name}").with_suffix(".gif")
 
     new_img = None
     frames = []
@@ -412,71 +432,77 @@ def main(argv):
 
         img.paste(src, (0, 0))
 
-        for proc in opts.proc_list:
-            if proc.startswith("crop_from_center"):
-                target_size = get_target_size(proc, img.size)
-                crop_box = crop_box_center(img.size, target_size)
-                img = img.crop(crop_box)
+        if len(opts.proc_list) == 0:
+            if 0 < opts.gif_ms:
+                gif_images.append(str(image_path))
+        else:
+            for proc in opts.proc_list:
+                if proc.startswith("crop_from_center"):
+                    target_size = get_target_size(proc, img.size)
+                    crop_box = crop_box_center(img.size, target_size)
+                    img = img.crop(crop_box)
 
-            elif proc.startswith("crop_from_left_top"):
-                target_size = get_target_size(proc, img.size)
-                crop_box = crop_box_left_top(img.size, target_size)
-                img = img.crop(crop_box)
+                elif proc.startswith("crop_from_left_top"):
+                    target_size = get_target_size(proc, img.size)
+                    crop_box = crop_box_left_top(img.size, target_size)
+                    img = img.crop(crop_box)
 
-            elif proc.startswith("crop_from_right_top("):
-                target_size = get_target_size(proc, img.size)
-                crop_box = crop_box_right_top(img.size, target_size)
-                img = img.crop(crop_box)
+                elif proc.startswith("crop_from_right_top("):
+                    target_size = get_target_size(proc, img.size)
+                    crop_box = crop_box_right_top(img.size, target_size)
+                    img = img.crop(crop_box)
 
-            elif proc.startswith("crop_from_left_bottom("):
-                target_size = get_target_size(proc, img.size)
-                crop_box = crop_box_left_bottom(img.size, target_size)
-                img = img.crop(crop_box)
+                elif proc.startswith("crop_from_left_bottom("):
+                    target_size = get_target_size(proc, img.size)
+                    crop_box = crop_box_left_bottom(img.size, target_size)
+                    img = img.crop(crop_box)
 
-            elif proc.startswith("crop_from_right_bottom("):
-                target_size = get_target_size(proc, img.size)
-                crop_box = crop_box_right_bottom(img.size, target_size)
-                img = img.crop(crop_box)
+                elif proc.startswith("crop_from_right_bottom("):
+                    target_size = get_target_size(proc, img.size)
+                    crop_box = crop_box_right_bottom(img.size, target_size)
+                    img = img.crop(crop_box)
 
-            elif proc.startswith("crop_zoom("):
-                target_size = get_target_size(proc, img.size)
-                new_size = get_new_size_zoom(img.size, target_size)
-                img = img.resize(new_size)
-                target_size = get_target_size(proc, img.size)
-                crop_box = crop_box_center(img.size, target_size)
-                img = img.crop(crop_box)
+                elif proc.startswith("crop_zoom("):
+                    target_size = get_target_size(proc, img.size)
+                    new_size = get_new_size_zoom(img.size, target_size)
+                    img = img.resize(new_size)
+                    target_size = get_target_size(proc, img.size)
+                    crop_box = crop_box_center(img.size, target_size)
+                    img = img.crop(crop_box)
 
-            elif proc.startswith("crop_to_box("):
-                crop_box = get_target_box(proc, img.size)
-                img = img.crop(crop_box)
+                elif proc.startswith("crop_to_box("):
+                    crop_box = get_target_box(proc, img.size)
+                    img = img.crop(crop_box)
 
-            else:
-                sys.stderr.write(
-                    "ERROR: Unknown process instruction in options file:\n"
-                    + f"'{proc}'\n"
-                )
-                sys.exit(1)
+                else:
+                    sys.stderr.write(
+                        "ERROR: Unknown process instruction in options file:\n"
+                        + f"'{proc}'\n"
+                    )
+                    sys.exit(1)
 
-        file_name = get_output_name(out_path, image_path, opts.timestamp_mode)
-        print(f"Saving '{file_name}'")
+            file_name = get_output_name(
+                out_path, image_path, opts.timestamp_mode
+            )
+            print(f"Saving '{file_name}'")
 
-        p = Path(file_name)
-        if p.exists():
-            if opts.do_overwrite:
-                p.unlink()
-            else:
-                sys.stderr.write(
-                    "ERROR: Cannot replace exising file:\n" + f"'{p}'\n"
-                )
-                sys.exit(1)
+            p = Path(file_name)
+            if p.exists():
+                if opts.do_overwrite:
+                    p.unlink()
+                else:
+                    sys.stderr.write(
+                        "ERROR: Cannot replace exising file:\n" + f"'{p}'\n"
+                    )
+                    sys.exit(1)
 
-        img.save(file_name)
+            img.save(file_name)
 
-        if 0 < opts.gif_ms:
-            gif_images.append(file_name)
+            if 0 < opts.gif_ms:
+                gif_images.append(file_name)
 
     if 0 < len(gif_images):
-        make_gif(opts.gif_ms, gif_images)
+        make_gif(opts.gif_ms, gif_images, out_path)
 
     return 0
 
