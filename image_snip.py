@@ -11,7 +11,7 @@ from PIL import Image
 from textwrap import dedent
 
 
-app_version = "220304.1"
+app_version = "220916.1"
 
 pub_version = "0.1.dev1"
 
@@ -163,18 +163,23 @@ def extract_target_size(proc: str):
 def get_target_size(proc, current_size):
     width, height = extract_target_size(proc)
     msg = ""
+
     if current_size[0] < width:
         msg += "\n  Current width is less than the specified target width."
         width = current_size[0]
+
     if current_size[1] < height:
         msg += "\n  Current height is less than the specified target height."
         height = current_size[1]
+
     result = (width, height)
-    if 0 < len(msg):
+
+    if msg:
         print(f"WARNING: Target image size reduced from specified value.{msg}")
         print(f"  Process instruction: {proc}")
         print(f"  Current size: {current_size}")
         print(f"  Adjusted target size: {result}")
+
     return result
 
 
@@ -236,16 +241,16 @@ def get_target_box(proc, current_size):
 def get_args(argv):
     ap = argparse.ArgumentParser(
         description="Modifies images (crop, resize, and more) and saves the "
-        + "modified versions as .jpg files. An options (plain text) file is "
-        + "required to specify the process instructions and list of image "
-        + "files."
+        "modified versions as .jpg files. An options (plain text) file is "
+        "required to specify the process instructions and list of image "
+        "files."
     )
 
     ap.add_argument(
         "opt_file",
         action="store",
         help="Name of 'options file' containing a list of process "
-        + "instructions and image file names, one per line.",
+        "instructions and image file names, one per line.",
     )
 
     ap.add_argument(
@@ -253,7 +258,7 @@ def get_args(argv):
         dest="do_overwrite",
         action="store_true",
         help="Overwrite existing output files. By default, existing files are "
-        + "not replaced.",
+        "not replaced.",
     )
 
     ap.add_argument(
@@ -261,8 +266,8 @@ def get_args(argv):
         dest="do_template",
         action="store_true",
         help="Write available options, as comment lines, to the specified "
-        + "options file to use as a template. If the file already exists "
-        + "the template comments are appended to the file.",
+        "options file to use as a template. If the file already exists "
+        "the template comments are appended to the file.",
     )
 
     return ap.parse_args(argv[1:])
@@ -303,7 +308,7 @@ def write_template_lines(file_path):
                     #--- Put list of image files below, one per line:
                 """
             )
-    )
+        )
 
 
 def get_opt_str(opt_line: str) -> str:
@@ -345,7 +350,7 @@ def get_opts(args) -> AppOptions:
     with open(opt_file, "r") as f:
         for line in f.readlines():
             s = line.strip().strip("'\"")
-            if (0 < len(s)) and (not s.startswith("#")):
+            if s and (not s.startswith("#")):
                 if s.startswith("crop_") and s.endswith(")"):
                     #  Process instruction.
                     proc_list.append(s)
@@ -366,26 +371,26 @@ def get_opts(args) -> AppOptions:
                     else:
                         error_list.append(f"File not found: '{p}'")
 
-    if 0 < len(error_list):
+    if error_list:
         sys.stderr.write("ERRORS:\n")
         for msg in error_list:
             sys.stderr.write(f"{msg}\n")
         sys.exit(1)
 
-    if len(image_paths) == 0:
+    if not image_paths:
         sys.stderr.write(
             "ERROR: Options file did not contain any image file names.\n"
         )
         sys.exit(1)
 
-    if len(proc_list) == 0 and gif_ms == 0:
+    if not (proc_list or gif_ms):
         sys.stderr.write(
             "ERROR: Options file did not contain any process "
-            + "instructions.\n"
+            "instructions.\n"
         )
         sys.exit(1)
 
-    if 0 < len(output_dir):
+    if output_dir:
         p = Path(output_dir).expanduser().resolve()
         if not p.exists():
             sys.stderr.write(
@@ -467,7 +472,7 @@ def main(argv):
         #  Is None if write_template_lines was called.
         return 0
 
-    if len(opts.output_dir) == 0:
+    if not opts.output_dir:
         #  Default to a new directory under the first image files's parent.
         dt = datetime.now().strftime("%Y%m%d_%H%M%S")
         out_path = opts.image_paths[0].parent / f"crop_{dt}"
@@ -491,7 +496,7 @@ def main(argv):
 
         img.paste(src, (0, 0))
 
-        if len(opts.proc_list) == 0:
+        if not opts.proc_list:
             if 0 < opts.gif_ms:
                 gif_images.append(str(image_path))
         else:
@@ -536,7 +541,7 @@ def main(argv):
                 else:
                     sys.stderr.write(
                         "ERROR: Unknown process instruction in options file:\n"
-                        + f"'{proc}'\n"
+                        f"'{proc}'\n"
                     )
                     sys.exit(1)
 
@@ -560,7 +565,7 @@ def main(argv):
             if 0 < opts.gif_ms:
                 gif_images.append(file_name)
 
-    if 0 < len(gif_images):
+    if gif_images:
         make_gif(opts.gif_ms, gif_images, out_path)
 
     return 0
