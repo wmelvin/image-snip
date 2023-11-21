@@ -13,9 +13,9 @@ from textwrap import dedent
 from typing import List
 
 
-app_version = "231120.1"
+app_version = "231121.1"
 
-__version__ = "0.1.dev2"
+__version__ = "0.1.dev3"
 
 app_label = f"image_snip.py version {__version__} (mod {app_version})"
 
@@ -272,7 +272,7 @@ def get_target_box(proc, current_size):
     return (x1, y1, x2, y2)
 
 
-def get_args(argv):
+def get_args(arglist=None):
     """
     Return arguments parsed from the command line using argparse.
     """
@@ -307,7 +307,7 @@ def get_args(argv):
         "the template comments are appended to the file.",
     )
 
-    return ap.parse_args(argv[1:])
+    return ap.parse_args(arglist)
 
 
 def write_template_lines(file_path):
@@ -375,12 +375,15 @@ def get_opt_str(opt_line: str) -> str:
     return a[1].strip()
 
 
-def get_opts(args) -> AppOptions:
+def get_opts(arglist=None) -> AppOptions:
     """
     Return AppOptions (named tuple) set per the command line arguments
     and the options file. Checks for missing paths and errors in the
     options file.
     """
+
+    args = get_args(arglist)
+
     opt_file = args.opt_file
     if opt_file is None:
         sys.stderr.write("ERROR: No options file specified.\n")
@@ -592,12 +595,10 @@ def add_text_footer(image, text, font, font_size, numbering, file_num, file_coun
     return im
 
 
-def main():
+def main(arglist=None):
     print(f"\n{app_label}\n")
 
-    args = get_args(sys.argv)
-
-    opts = get_opts(args)
+    opts = get_opts(arglist)
 
     if opts is None:
         #  Is None if write_template_lines was called.
@@ -722,4 +723,4 @@ def main():
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    main()
