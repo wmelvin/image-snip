@@ -53,108 +53,135 @@ def get_test_opts_and_img(
     return (opt_file, expect_image)
 
 
-def test_crop_to_box(tmp_path):
+def test_crop_to_box(tmp_path, monkeypatch):
     """Test crop_to_box(x1, y1, x2, y2)."""
     opt, img = get_test_opts_and_img(
         tmp_path, "crop_to_box(200, 100, 900, 500)", "crop_to_box"
     )
     args = ["image_snip.py", str(opt)]
-    result = image_snip.main(args)
+
+    monkeypatch.setattr("sys.argv", args)
+    result = image_snip.main()
+
     assert result == 0
     expected_size = (700, 400)
     assert Image.open(img).size == expected_size
 
 
-def test_crop_to_box_same_size(tmp_path):
+def test_crop_to_box_same_size(tmp_path, monkeypatch):
     """Test crop_to_box where box is same size as source image."""
     opt, img = get_test_opts_and_img(
         tmp_path, "crop_to_box(0, 0, 1920, 1440)", "crop_to_box"
     )
     args = ["image_snip.py", str(opt)]
-    result = image_snip.main(args)
+
+    monkeypatch.setattr("sys.argv", args)
+    result = image_snip.main()
+
     assert result == 0
     expected_size = (1920, 1440)
     assert Image.open(img).size == expected_size
 
 
-def test_crop_larger_than_source(tmp_path):
+def test_crop_larger_than_source(tmp_path, monkeypatch):
     """Test specifying cropped size larger than the source image size."""
     opt, img = get_test_opts_and_img(
         tmp_path, "crop_from_left_top(2000, 1800)", "larger"
     )
     args = ["image_snip.py", str(opt)]
-    result = image_snip.main(args)
+
+    monkeypatch.setattr("sys.argv", args)
+    result = image_snip.main()
+
     assert result == 0
     # Should keep source image size, not scale to larger size.
     expected_size = (1920, 1440)
     assert Image.open(img).size == expected_size
 
 
-def test_crop_zoom(tmp_path):
+def test_crop_zoom(tmp_path, monkeypatch):
     opt, img = get_test_opts_and_img(tmp_path, "crop_zoom(800, 800)", "zoom")
     args = ["image_snip.py", str(opt)]
-    result = image_snip.main(args)
+
+    monkeypatch.setattr("sys.argv", args)
+    result = image_snip.main()
+
     assert result == 0
     expected_size = (800, 800)
     assert Image.open(img).size == expected_size
 
 
-def test_crop_center(tmp_path):
+def test_crop_center(tmp_path, monkeypatch):
     opt, img = get_test_opts_and_img(
         tmp_path, "crop_from_center(1024, 768)", "center"
     )
     args = ["image_snip.py", str(opt)]
-    result = image_snip.main(args)
+
+    monkeypatch.setattr("sys.argv", args)
+    result = image_snip.main()
+
     assert result == 0
     expected_size = (1024, 768)
     assert Image.open(img).size == expected_size
 
 
-def test_crop_left_top(tmp_path):
+def test_crop_left_top(tmp_path, monkeypatch):
     opt, img = get_test_opts_and_img(
         tmp_path, "crop_from_left_top(640, 480)", "left_top"
     )
     args = ["image_snip.py", str(opt)]
-    result = image_snip.main(args)
+
+    monkeypatch.setattr("sys.argv", args)
+    result = image_snip.main()
+
     assert result == 0
     expected_size = (640, 480)
     assert Image.open(img).size == expected_size
 
 
-def test_crop_right_top(tmp_path):
+def test_crop_right_top(tmp_path, monkeypatch):
     opt, img = get_test_opts_and_img(
         tmp_path, "crop_from_right_top(640, 480)", "right_top"
     )
     args = ["image_snip.py", str(opt)]
-    result = image_snip.main(args)
+
+    monkeypatch.setattr("sys.argv", args)
+    result = image_snip.main()
+
     assert result == 0
     expected_size = (640, 480)
     assert Image.open(img).size == expected_size
 
 
-def test_crop_left_bottom(tmp_path):
+def test_crop_left_bottom(tmp_path, monkeypatch):
     opt, img = get_test_opts_and_img(
         tmp_path, "crop_from_left_bottom(640, 480)", "left_bottom"
     )
     args = ["image_snip.py", str(opt)]
-    result = image_snip.main(args)
+
+    monkeypatch.setattr("sys.argv", args)
+    result = image_snip.main()
+
     assert result == 0
     expected_size = (640, 480)
     assert Image.open(img).size == expected_size
 
 
-def test_crop_right_bottom(tmp_path):
+def test_crop_right_bottom(tmp_path, monkeypatch):
     opt, img = get_test_opts_and_img(
         tmp_path, "crop_from_right_bottom(640, 480)", "right_bottom"
     )
     args = ["image_snip.py", str(opt)]
-    result = image_snip.main(args)
+
+    monkeypatch.setattr("sys.argv", args)
+    result = image_snip.main()
+
     assert result == 0
     expected_size = (640, 480)
     assert Image.open(img).size == expected_size
 
 
-def test_options(tmp_path):
+def test_options(tmp_path, monkeypatch):
     d = tmp_path / "testopts"
     d.mkdir()
     p = d / "test-options.txt"
@@ -179,11 +206,14 @@ def test_options(tmp_path):
     assert p.exists()
 
     args = ["image_snip.py", str(p)]
-    result = image_snip.main(args)
+
+    monkeypatch.setattr("sys.argv", args)
+    result = image_snip.main()
+
     assert result == 0
 
 
-def test_animated_gif(tmp_path):
+def test_animated_gif(tmp_path, monkeypatch):
     d = tmp_path / "testopts"
     d.mkdir()
     p = d / "test-animated-gif.txt"
@@ -211,11 +241,14 @@ def test_animated_gif(tmp_path):
     assert p.exists()
 
     args = ["image_snip.py", str(p)]
-    result = image_snip.main(args)
+
+    monkeypatch.setattr("sys.argv", args)
+    result = image_snip.main()
+
     assert result == 0
 
 
-def test_animated_gif_only(tmp_path):
+def test_animated_gif_only(tmp_path, monkeypatch):
     d = tmp_path / "testopts"
     d.mkdir()
     p = d / "test-animated-gif-only.txt"
@@ -241,5 +274,39 @@ def test_animated_gif_only(tmp_path):
     assert p.exists()
 
     args = ["image_snip.py", str(p)]
-    result = image_snip.main(args)
+
+    monkeypatch.setattr("sys.argv", args)
+    result = image_snip.main()
+
     assert result == 0
+
+
+def test_add_text_footer():
+    """
+    Test add_text_footer().
+    This only tests that the image is expanded to hold the footer text.
+    The actual text is not tested.
+    This test requires specifying a font file, making it system-dependent.
+    """
+    from PIL import Image, ImageFont
+    from image_snip import add_text_footer
+
+    # Create a blank image
+    image = Image.new("RGB", (100, 100), color=(128, 128, 128))
+
+    # Define the parameters.
+    text = "Test"
+    font = ImageFont.truetype("LiberationMono-Regular.ttf", 12)
+    font_size = 15
+    numbering = 0
+    file_num = 0
+    file_count = 0
+
+    # Call the function
+    new_image = add_text_footer(
+        image, text, font, font_size, numbering, file_num, file_count
+    )
+
+    # Check the new image's size. Note: The expected size was determined
+    # by an initial failed assertion.
+    assert new_image.size == (100, 147)

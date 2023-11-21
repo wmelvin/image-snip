@@ -1,0 +1,36 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "image_snip"
+dynamic = ["version"]
+description = 'Command-line utility to apply the same supported operations to a batch of image files.'
+readme = "README.md"
+requires-python = ">=3.8"
+license = {file = "LICENSE"}
+keywords = [ "images", "crop"]
+
+authors = [
+  { name = "Bill Melvin", email = "bill@sbillmelvin.com" },
+]
+
+dependencies = [ "pillow" ]
+
+[project.urls]
+Source = "https://github.com/wmelvin/image-snip"
+
+[tool.setuptools.dynamic]
+version = {attr = "image_snip.__version__"}
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["image_snip*"]
+exclude = ["test*"]
+namespaces = false
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+
+[project.scripts]
+image_snip = "image_snip:main"

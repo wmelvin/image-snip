@@ -5,22 +5,36 @@ import io
 import sys
 
 from collections import namedtuple
+from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
-from PIL import Image
+from PIL import Image, ImageDraw, ImageFont
 from textwrap import dedent
+from typing import List
 
 
-app_version = "220916.1"
+app_version = "231120.1"
 
-pub_version = "0.1.dev1"
+__version__ = "0.1.dev2"
 
-app_label = f"image_snip.py version {pub_version} (mod {app_version})"
+app_label = f"image_snip.py version {__version__} (mod {app_version})"
+
+
+FOOTER_PAD_PX = 10
+FOOTER_FOREGROUND_RGB = (255, 255, 255)
+FOOTER_BACKGROUND_RGB = (25, 25, 112)
+
+
+@dataclass
+class FileInfo:
+    path: Path = None
+    text: str = None
 
 
 AppOptions = namedtuple(
     "AppOptions",
-    "proc_list, image_paths, output_dir, timestamp_mode, gif_ms, do_overwrite",
+    "proc_list, files, output_dir, timestamp_mode, gif_ms, do_overwrite, "
+    "text_font, text_size, text_numbering",
 )
 
 
@@ -194,6 +208,20 @@ def extract_gif_param(proc: str):
     return int(a[1])
 
 
+def extract_text_param(s: str):
+    """
+    Extracts the parameters for adding text to the bottom of an image,
+    from a string that contains a font name (string) and a font size
+    (integer), and a numbering option (integer) in parentheses,
+    separated by a comma.
+    """
+    a = s.strip(")").split("(")
+    assert len(a) == 2
+    b = a[1].split(",")
+    assert len(b) == 3
+    return (b[0].strip("'\""), int(b[1]), int(b[2]))
+
+
 def extract_target_box(proc: str):
     """
     Extracts target box as a tuple of 4 integers (x1, y1, x2, y2) from
@@ -208,6 +236,12 @@ def extract_target_box(proc: str):
 
 
 def get_target_box(proc, current_size):
+    """
+    Return box coordinates (x1, y1, x2, y2) to crop image to target box.
+    If the box coordinates are outside the current image size, the
+    coordinates are adjusted to fit the image size. If the box coordinates
+    are invalid, the program exits.
+    """
     x1, y1, x2, y2 = extract_target_box(proc)
 
     if (x2 < x1) or (y2 < y1):
@@ -239,6 +273,9 @@ def get_target_box(proc, current_size):
 
 
 def get_args(argv):
+    """
+    Return arguments parsed from the command line using argparse.
+    """
     ap = argparse.ArgumentParser(
         description="Modifies images (crop, resize, and more) and saves the "
         "modified versions as .jpg files. An options (plain text) file is "
@@ -274,6 +311,11 @@ def get_args(argv):
 
 
 def write_template_lines(file_path):
+    """
+    Write a list of regognized options and process instructions to the
+    specified file. If the file already exists the template comments
+    are appended to the file.
+    """
     print(f"Writing template lines to '{file_path}'")
     with open(file_path, "a") as f:
         f.write(
@@ -305,7 +347,16 @@ def write_template_lines(file_path):
 
                     # animated_gif(duration_milliseconds)
 
+                    # text_footers("font-file-name", font-size, numbering)
+                    #   numbering:
+                    #     0 = No numbering
+                    #     1 = Image number in footer.
+                    #     2 = Image number of total in footer.
+
                     #--- Put list of image files below, one per line:
+                    #    If adding text_footers, put the text (caption) on the
+                    #    line below the image file name, and begin that line
+                    #    with the '>' character to indicate a caption.
                 """
             )
         )
@@ -325,6 +376,11 @@ def get_opt_str(opt_line: str) -> str:
 
 
 def get_opts(args) -> AppOptions:
+    """
+    Return AppOptions (named tuple) set per the command line arguments
+    and the options file. Checks for missing paths and errors in the
+    options file.
+    """
     opt_file = args.opt_file
     if opt_file is None:
         sys.stderr.write("ERROR: No options file specified.\n")
@@ -340,19 +396,28 @@ def get_opts(args) -> AppOptions:
 
     print(f"Reading options from '{opt_file}'.")
 
-    image_paths = []
+    files: List[FileInfo] = []
     proc_list = []
     output_dir = ""
     timestamp_mode = 0
     gif_ms = 0
+    text_font = ""
+    text_size = 0
+    text_numbering = 0
 
     error_list = []
+    last_text = None
+
     with open(opt_file, "r") as f:
         for line in f.readlines():
             s = line.strip().strip("'\"")
             if s and (not s.startswith("#")):
                 if s.startswith("crop_") and s.endswith(")"):
                     #  Process instruction.
+                    proc_list.append(s)
+                elif s.startswith("text_footers(") and s.endswith(")"):
+                    #  Instruction to add text to the bottom of the image.
+                    text_font, text_size, text_numbering = extract_text_param(s)
                     proc_list.append(s)
                 elif s.startswith("animated_gif(") and s.endswith(")"):
                     #  Instruction to make an animated GIF.
@@ -363,11 +428,18 @@ def get_opts(args) -> AppOptions:
                 elif s.startswith("timestamp_mode:"):
                     #  Mode for adding a timestamp to the output file name.
                     timestamp_mode = int(get_opt_str(s))
+                elif s.startswith(">"):
+                    #  Footer text to add to the previous image file.
+                    #  Text is repeated on subsequent images that do not have
+                    #  a their own '> text...' line in the options file.
+                    #  A line with only '>' clears the footer text.
+                    last_text = s[1:].strip(" '\"")
+                    files[-1].text = last_text
                 else:
                     #  Image file path.
                     p = Path(s).expanduser().resolve()
                     if p.exists():
-                        image_paths.append(p)
+                        files.append(FileInfo(p, last_text))
                     else:
                         error_list.append(f"File not found: '{p}'")
 
@@ -377,45 +449,46 @@ def get_opts(args) -> AppOptions:
             sys.stderr.write(f"{msg}\n")
         sys.exit(1)
 
-    if not image_paths:
-        sys.stderr.write(
-            "ERROR: Options file did not contain any image file names.\n"
-        )
+    if not files:
+        sys.stderr.write("ERROR: Options file did not contain any image file names.\n")
         sys.exit(1)
 
-    if not (proc_list or gif_ms):
+    if not (proc_list or gif_ms or text_font):
         sys.stderr.write(
-            "ERROR: Options file did not contain any process "
-            "instructions.\n"
+            "ERROR: Options file did not contain any process " "instructions.\n"
         )
         sys.exit(1)
 
     if output_dir:
         p = Path(output_dir).expanduser().resolve()
         if not p.exists():
-            sys.stderr.write(
-                "ERROR: Specified output_folder does not exist.\n"
-            )
+            sys.stderr.write(f"ERROR: output_folder not found: {p}\n")
             sys.exit(1)
         output_dir = str(p)
 
     opts = AppOptions(
         proc_list,
-        image_paths,
+        files,
         output_dir,
         timestamp_mode,
         gif_ms,
         args.do_overwrite,
+        text_font,
+        text_size,
+        text_numbering,
     )
 
     return opts
 
 
 def make_gif(gif_ms, image_list, out_path):
-    # #  Use the last file in the list as the basis for the animated GIF
-    # #  file name.
-    # last_file = Path(image_list[-1])
+    """
+    Make an animated GIF from a list of image files.
 
+    gif_ms: The display duration in milliseconds for each frame.
+    image_list: List of image file names.
+    out_path: Path to the output directory.
+    """
     #  Use the first file in the list as the basis for the animated GIF
     #  file name.
     p = Path(image_list[0])
@@ -461,10 +534,68 @@ def make_gif(gif_ms, image_list, out_path):
         )
 
 
-def main(argv):
+def get_est_text_ht(font, font_size, pad_px=20):
+    """
+    Return the estimeted height in pixels needed to display text using the
+    given font and font size.
+    ImageDraw.Draw has a textlength() method, but no textheight() method,
+    so get the length of the letter "M" and use that to estimate the height.
+    Some padding is added to the height.
+    """
+    temp_img = Image.new("RGB", (400, 400))
+    draw = ImageDraw.Draw(temp_img)
+    font_len = int(draw.textlength("M", font=font, font_size=font_size))
+    px = font_len + pad_px
+
+    # # For testing:
+    # temp_img = Image.new("RGB", (px, px))
+    # draw = ImageDraw.Draw(temp_img)
+    # draw.text((0, 0), "M", font=font, fill=(255, 255, 255, 255))
+    # temp_img.save("test.jpg")
+
+    return px
+
+
+def add_text_footer(image, text, font, font_size, numbering, file_num, file_count):
+    """
+    Add a footer with text to an image.
+
+    image: Image object to modify.
+    text: The text to add to the image.
+    font: The font (ImageFont object) to use.
+    font_size: The font size to use.
+    numbering: The numbering option.
+    file_num: The number of the current image file.
+    file_count: The total number of image files.
+
+    Returns a new Image object with the footer added.
+    """
+
+    est_ht = get_est_text_ht(font, font_size)
+    new_h = int(image.height + est_ht + (FOOTER_PAD_PX * 2))
+
+    im = Image.new("RGB", (image.width, new_h), FOOTER_BACKGROUND_RGB)
+    im.paste(image, (0, 0))
+
+    #  If the numbering option is 1 or 2 add the image number to the text,
+    #  even if text is empty.
+    if numbering == 1:
+        text = f"{text}  ({file_num})"
+    elif numbering == 2:
+        text = f"{text}  ({file_num}/{file_count})"
+
+    if text:
+        draw = ImageDraw.Draw(im)
+        text_at = (est_ht, image.height + FOOTER_PAD_PX)
+        draw.text(text_at, text, font=font, fill=FOOTER_FOREGROUND_RGB)
+
+    return im
+
+
+def main():
     print(f"\n{app_label}\n")
 
-    args = get_args(argv)
+    args = get_args(sys.argv)
 
     opts = get_opts(args)
 
@@ -472,10 +603,23 @@ def main(argv):
         #  Is None if write_template_lines was called.
         return 0
 
+    if opts.text_font:
+        try:
+            if opts.text_font.lower().endswith(".ttf"):
+                font = ImageFont.truetype(opts.text_font, opts.text_size)
+            else:
+                font = ImageFont.load(opts.text_font)
+        except OSError:
+            print(f"WARNING: Cannot load font '{opts.text_font}'.")
+            return 1
+        if not opts.text_size:
+            print("WARNING: No font size specified.")
+            return 1
+
     if not opts.output_dir:
         #  Default to a new directory under the first image files's parent.
         dt = datetime.now().strftime("%Y%m%d_%H%M%S")
-        out_path = opts.image_paths[0].parent / f"crop_{dt}"
+        out_path = opts.files[0].path.parent / f"crop_{dt}"
         assert not out_path.exists()
         out_path.mkdir()
     else:
@@ -484,13 +628,12 @@ def main(argv):
 
     assert out_path.exists()
 
-    # gif_ms = 0
     gif_images = []
 
-    for image_path in opts.image_paths:
-        print(f"Reading '{image_path}'")
+    for file_num, file_info in enumerate(opts.files, start=1):
+        print(f"Reading '{file_info.path}'")
 
-        src = Image.open(image_path)
+        src = Image.open(file_info.path)
 
         img = Image.new("RGB", src.size)
 
@@ -498,7 +641,7 @@ def main(argv):
 
         if not opts.proc_list:
             if 0 < opts.gif_ms:
-                gif_images.append(str(image_path))
+                gif_images.append(str(file_info.path))
         else:
             for proc in opts.proc_list:
                 if proc.startswith("crop_from_center"):
@@ -538,6 +681,17 @@ def main(argv):
                     crop_box = get_target_box(proc, img.size)
                     img = img.crop(crop_box)
 
+                elif proc.startswith("text_footers("):
+                    if opts.text_font:
+                        img = add_text_footer(
+                            img,
+                            file_info.text,
+                            font, opts.text_size,
+                            opts.text_numbering,
+                            file_num,
+                            len(opts.files)
+                        )
+
                 else:
                     sys.stderr.write(
                         "ERROR: Unknown process instruction in options file:\n"
@@ -545,9 +699,7 @@ def main(argv):
                     )
                     sys.exit(1)
 
-            file_name = get_output_name(
-                out_path, image_path, opts.timestamp_mode
-            )
+            file_name = get_output_name(out_path, file_info.path, opts.timestamp_mode)
             print(f"Saving '{file_name}'")
 
             p = Path(file_name)
@@ -555,9 +707,7 @@ def main(argv):
                 if opts.do_overwrite:
                     p.unlink()
                 else:
-                    sys.stderr.write(
-                        "ERROR: Cannot replace exising file:\n" + f"'{p}'\n"
-                    )
+                    sys.stderr.write(f"ERROR: Cannot replace exising file:\n'{p}'\n")
                     sys.exit(1)
 
             img.save(file_name)
@@ -572,4 +722,4 @@ def main(argv):
 
 
 if __name__ == "__main__":
-    sys.exit(main(sys.argv))
+    sys.exit(main())
