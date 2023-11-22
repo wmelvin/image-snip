@@ -13,11 +13,9 @@ from textwrap import dedent
 from typing import List
 
 
-app_version = "231121.1"
+__version__ = "0.1.dev4"
 
-__version__ = "0.1.dev3"
-
-app_label = f"image_snip.py version {__version__} (mod {app_version})"
+app_label = f"image_snip.py (v{__version__})"
 
 
 FOOTER_PAD_PX = 10
@@ -354,9 +352,9 @@ def write_template_lines(file_path):
                     #     2 = Image number of total in footer.
 
                     #--- Put list of image files below, one per line:
-                    #    If adding text_footers, put the text (caption) on the
-                    #    line below the image file name, and begin that line
-                    #    with the '>' character to indicate a caption.
+                    #      If adding text_footers, put the text (caption) on the
+                    #      line above the image file name, and begin that line
+                    #      with the '>' character to indicate a caption.
                 """
             )
         )
@@ -409,7 +407,7 @@ def get_opts(arglist=None) -> AppOptions:
     text_numbering = 0
 
     error_list = []
-    last_text = None
+    caption = ""
 
     with open(opt_file, "r") as f:
         for line in f.readlines():
@@ -432,17 +430,14 @@ def get_opts(arglist=None) -> AppOptions:
                     #  Mode for adding a timestamp to the output file name.
                     timestamp_mode = int(get_opt_str(s))
                 elif s.startswith(">"):
-                    #  Footer text to add to the previous image file.
-                    #  Text is repeated on subsequent images that do not have
-                    #  a their own '> text...' line in the options file.
-                    #  A line with only '>' clears the footer text.
-                    last_text = s[1:].strip(" '\"")
-                    files[-1].text = last_text
+                    #  Footer caption to add to subsequent images.
+                    #  A line with only '>' clears the text.
+                    caption = s[1:].strip(" '\"")
                 else:
                     #  Image file path.
                     p = Path(s).expanduser().resolve()
                     if p.exists():
-                        files.append(FileInfo(p, last_text))
+                        files.append(FileInfo(p, caption))
                     else:
                         error_list.append(f"File not found: '{p}'")
 

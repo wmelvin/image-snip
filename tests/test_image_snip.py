@@ -53,14 +53,17 @@ def get_test_opts_and_img(
     return (opt_file, expect_image)
 
 
-def test_crop_to_box(tmp_path):
+def test_crop_to_box(tmp_path, monkeypatch):
     """Test crop_to_box(x1, y1, x2, y2)."""
     opt, img = get_test_opts_and_img(
         tmp_path, "crop_to_box(200, 100, 900, 500)", "crop_to_box"
     )
 
-    args = [str(opt)]
-    result = image_snip.main(args)
+    #  Use monkeypatch once to test args are taken from sys.argv if not passed
+    #  directly to main.
+    args = ["image_snip", str(opt)]
+    monkeypatch.setattr("sys.argv", args)
+    result = image_snip.main()
 
     assert result == 0
     expected_size = (700, 400)
