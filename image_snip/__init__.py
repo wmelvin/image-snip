@@ -13,9 +13,9 @@ from textwrap import dedent
 from typing import List
 
 
-__version__ = "0.1.dev4"
+__version__ = "0.1.dev5"
 
-app_label = f"image_snip.py (v{__version__})"
+app_label = f"image_snip (v{__version__})"
 
 
 FOOTER_PAD_PX = 10
@@ -31,8 +31,8 @@ class FileInfo:
 
 AppOptions = namedtuple(
     "AppOptions",
-    "proc_list, files, output_dir, timestamp_mode, gif_ms, do_overwrite, "
-    "text_font, text_size, text_numbering",
+    "proc_list, files, output_dir, output_format, timestamp_mode, gif_ms,"
+    "do_overwrite, text_font, text_size, text_numbering",
 )
 
 
@@ -136,7 +136,9 @@ def crop_box_right_bottom(current_size, target_size):
     return (x1, y1, x2, y2)
 
 
-def get_output_name(output_path: Path, input_name: str, timestamp_mode: int):
+def get_output_name(
+    output_path: Path, output_format: str, input_name: str, timestamp_mode: int
+):
     """
     Returns the full path for the output file based on the name of the source
     image file.
@@ -149,14 +151,23 @@ def get_output_name(output_path: Path, input_name: str, timestamp_mode: int):
 
     Output files are .jpg format.
     """
+
     p = Path(input_name)
+
     if timestamp_mode == 1:
         file_stem = f"{p.stem}-{datetime.now().strftime('%Y%m%d_%H%M%S')}"
     elif timestamp_mode == 2:
         file_stem = f"{p.stem}-{datetime.now().strftime('%Y%m%d_%H%M%S_%f')}"
     else:
         file_stem = f"{p.stem}-crop"
-    return str(output_path.joinpath(f"{file_stem}.jpg"))
+
+    if output_format:
+        assert output_format in ["JPG", "PNG"]
+        ext = f".{output_format.lower()}"
+    else:
+        ext = p.suffix
+
+    return str(output_path.joinpath(f"{file_stem}{ext}"))
 
 
 def extract_target_size(proc: str):
@@ -165,6 +176,7 @@ def extract_target_size(proc: str):
     a string that ends with two integers, in parentheses, separated by
     a comma.
     """
+    #  TODO: Replace assert with validation check and error message.
     a = proc.strip(")").split("(")
     assert len(a) == 2
     b = a[1].split(",")
@@ -201,6 +213,7 @@ def extract_gif_param(proc: str):
     display duration in milliseconds, from a string that ends with an
     integer, in parentheses.
     """
+    #  TODO: Replace assert with validation check and error message.
     a = proc.strip(")").split("(")
     assert len(a) == 2
     return int(a[1])
@@ -213,11 +226,29 @@ def extract_text_param(s: str):
     (integer), and a numbering option (integer) in parentheses,
     separated by a comma.
     """
+    #  TODO: Replace assert with validation check and error message.
     a = s.strip(")").split("(")
     assert len(a) == 2
     b = a[1].split(",")
     assert len(b) == 3
     return (b[0].strip("'\""), int(b[1]), int(b[2]))
+
+
+def extract_border_attrs(s: str):
+    """
+    Extract the attributes for adding a border to an image.
+    Return (width, (R, G, B))
+    """
+    #  TODO: Replace assert with validation check and error message.
+    a = s.strip(")").split("(")
+    assert len(a) == 2
+    if "," in a[1]:
+        b = [int(x) for x in a[1].split(",")]
+        assert len(b) == 4
+        return b[0], (b[1], b[2], b[3])
+    else:
+        #  Default border color same as text footer background color.
+        return (int(a[1]), FOOTER_BACKGROUND_RGB)
 
 
 def extract_target_box(proc: str):
@@ -226,6 +257,7 @@ def extract_target_box(proc: str):
     a string that ends with four integers, in parentheses, separated
     by a comma.
     """
+    #  TODO: Replace assert with validation check and error message.
     a = proc.strip(")").split("(")
     assert len(a) == 2
     b = a[1].split(",")
@@ -323,6 +355,8 @@ def write_template_lines(file_path):
 
                     # output_folder:
 
+                    # output_format: JPG | PNG
+
                     # timestamp_mode:
                         # 1 = Add date_time to file name, to the second.
                         # 2 = Add date_time to file name, to the microsecond.
@@ -342,6 +376,10 @@ def write_template_lines(file_path):
                     # crop_to_box(x1, y1, x2, y2)
 
                     # crop_zoom(width, height)
+
+                    # border(width)  # Default color
+
+                    # border(width, red, green, blue)  # Specify RGB color.
 
                     # animated_gif(duration_milliseconds)
 
@@ -400,6 +438,7 @@ def get_opts(arglist=None) -> AppOptions:
     files: List[FileInfo] = []
     proc_list = []
     output_dir = ""
+    output_format = ""
     timestamp_mode = 0
     gif_ms = 0
     text_font = ""
@@ -413,7 +452,7 @@ def get_opts(arglist=None) -> AppOptions:
         for line in f.readlines():
             s = line.strip().strip("'\"")
             if s and (not s.startswith("#")):
-                if s.startswith("crop_") and s.endswith(")"):
+                if s.startswith(("crop_", "border(")) and s.endswith(")"):
                     #  Process instruction.
                     proc_list.append(s)
                 elif s.startswith("text_footers(") and s.endswith(")"):
@@ -426,6 +465,9 @@ def get_opts(arglist=None) -> AppOptions:
                 elif s.startswith("output_folder:"):
                     #  Output folder/directory option.
                     output_dir = get_opt_str(s)
+                elif s.startswith("output_format:"):
+                    #  Output format: JPG, JPEG, or PNG.
+                    output_format = get_opt_str(s)
                 elif s.startswith("timestamp_mode:"):
                     #  Mode for adding a timestamp to the output file name.
                     timestamp_mode = int(get_opt_str(s))
@@ -464,10 +506,24 @@ def get_opts(arglist=None) -> AppOptions:
             sys.exit(1)
         output_dir = str(p)
 
+    if output_format:
+        #  If output_format was specified, narrow it down to JPG or PNG.
+        if output_format.upper in ["JPG", "JPEG"]:
+            output_format = "JPG"
+        elif output_format.upper == "PNG":
+            output_format = "PNG"
+        else:
+            print(
+                f"WARNING: output_format '{output_format}' not valid. "
+                "Defaulting to 'PNG'."
+            )
+            output_format = "PNG"
+
     opts = AppOptions(
         proc_list,
         files,
         output_dir,
+        output_format,
         timestamp_mode,
         gif_ms,
         args.do_overwrite,
@@ -590,6 +646,20 @@ def add_text_footer(image, text, font, font_size, numbering, file_num, file_coun
     return im
 
 
+def add_border(src: Image.Image, proc):
+    w, rgb = extract_border_attrs(proc)
+    ww = w + w
+    new_size = (src.width - ww, src.height - ww)
+
+    img = Image.new("RGB", src.size, rgb)
+
+    src = src.resize(new_size, Image.Resampling.NEAREST)
+
+    img.paste(src, (w, w))
+
+    return img
+
+
 def main(arglist=None):
     print(f"\n{app_label}\n")
 
@@ -622,6 +692,7 @@ def main(arglist=None):
         #  If output_dir is specified it must already exist.
         out_path = Path(opts.output_dir)
 
+    #  TODO: Replace assert with validation check and error message.
     assert out_path.exists()
 
     gif_images = []
@@ -677,15 +748,19 @@ def main(arglist=None):
                     crop_box = get_target_box(proc, img.size)
                     img = img.crop(crop_box)
 
+                elif proc.startswith("border("):
+                    img = add_border(img, proc)
+
                 elif proc.startswith("text_footers("):
                     if opts.text_font:
                         img = add_text_footer(
                             img,
                             file_info.text,
-                            font, opts.text_size,
+                            font,
+                            opts.text_size,
                             opts.text_numbering,
                             file_num,
-                            len(opts.files)
+                            len(opts.files),
                         )
 
                 else:
@@ -695,7 +770,9 @@ def main(arglist=None):
                     )
                     sys.exit(1)
 
-            file_name = get_output_name(out_path, file_info.path, opts.timestamp_mode)
+            file_name = get_output_name(
+                out_path, opts.output_format, file_info.path, opts.timestamp_mode
+            )
             print(f"Saving '{file_name}'")
 
             p = Path(file_name)

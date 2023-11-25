@@ -2,7 +2,7 @@ import shutil
 
 from datetime import datetime
 from pathlib import Path
-from PIL import Image
+from PIL import Image, ImageFont
 from textwrap import dedent
 
 import image_snip
@@ -15,9 +15,7 @@ test_source_image_3 = Path("./images/example-3-400x400.jpg")
 test_source_image_4 = Path("./images/example-4-400x400.jpg")
 
 
-def get_test_opts_and_img(
-    opt_path: Path, process_instruction: str, image_tag: str
-):
+def get_test_opts_and_img(opt_path: Path, process_instruction: str, image_tag: str):
     """
     Returns (options_file_path, expected_test_image_path).
     """
@@ -111,9 +109,7 @@ def test_crop_zoom(tmp_path):
 
 
 def test_crop_center(tmp_path):
-    opt, img = get_test_opts_and_img(
-        tmp_path, "crop_from_center(1024, 768)", "center"
-    )
+    opt, img = get_test_opts_and_img(tmp_path, "crop_from_center(1024, 768)", "center")
 
     args = [str(opt)]
     result = image_snip.main(args)
@@ -224,11 +220,7 @@ def test_animated_gif(tmp_path):
             {1}
             {2}
             """
-        ).format(
-            test_source_image_2,
-            test_source_image_3,
-            test_source_image_4
-        )
+        ).format(test_source_image_2, test_source_image_3, test_source_image_4)
     )
     assert p.exists()
 
@@ -255,11 +247,7 @@ def test_animated_gif_only(tmp_path):
             {1}
             {2}
             """
-        ).format(
-            test_source_image_2,
-            test_source_image_3,
-            test_source_image_4
-        )
+        ).format(test_source_image_2, test_source_image_3, test_source_image_4)
     )
     assert p.exists()
 
@@ -276,8 +264,6 @@ def test_add_text_footer():
     The actual text is not tested.
     This test requires specifying a font file, making it system-dependent.
     """
-    from PIL import Image, ImageFont
-    from image_snip import add_text_footer
 
     # Create a blank image
     image = Image.new("RGB", (100, 100), color=(128, 128, 128))
@@ -291,10 +277,101 @@ def test_add_text_footer():
     file_count = 0
 
     # Call the function
-    new_image = add_text_footer(
+    new_image = image_snip.add_text_footer(
         image, text, font, font_size, numbering, file_num, file_count
     )
 
     # Check the new image's size. Note: The expected size was determined
     # by an initial failed assertion.
     assert new_image.size == (100, 147)
+
+
+def test_add_a_border(tmp_path):
+    dir_path = tmp_path / "test_border"
+    dir_path.mkdir()
+    out_path = dir_path / "output"
+    out_path.mkdir()
+    opt_file = dir_path / "test-add-border.txt"
+    img_file = dir_path / "a.jpg"
+    out_file = out_path / "a-crop.png"
+
+    opt_file.write_text(
+        dedent(
+            """
+            output_folder: {0}
+
+            output_format: PNG
+
+            # border(width, R, G, B)
+            border(4, 0, 0, 0)
+
+            {1}
+            """
+        ).format(out_path, img_file)
+    )
+    assert opt_file.exists()
+
+    #  Create a new image with white background.
+    img = Image.new("RGB", (100, 100), color=(255, 255, 255))
+    img.save(img_file)
+    assert img_file.exists()
+
+    args = [str(opt_file)]
+    result = image_snip.main(args)
+
+    assert result == 0
+
+    assert out_file.exists()
+
+    out_img = Image.open(out_file)
+
+    assert out_img.size == (100, 100), "Should be original size"
+
+    assert out_img.getpixel((3, 3)) == (0, 0, 0), "Should be black border"
+    assert out_img.getpixel((4, 4)) == (255, 255, 255), "Should be original color"
+
+
+def test_add_a_border_default_color(tmp_path):
+    dir_path = tmp_path / "test_border_default"
+    dir_path.mkdir()
+    out_path = dir_path / "output"
+    out_path.mkdir()
+    opt_file = dir_path / "test-add-border.txt"
+    img_file = dir_path / "a.png"
+    out_file = out_path / "a-crop.png"
+
+    opt_file.write_text(
+        dedent(
+            """
+            output_folder: {0}
+
+            # border(width)
+            border(4)
+
+            {1}
+            """
+        ).format(out_path, img_file)
+    )
+    assert opt_file.exists()
+
+    #  Create a new image with white background.
+    img = Image.new("RGB", (100, 100), color=(255, 255, 255))
+    img.save(img_file)
+    assert img_file.exists()
+
+    args = [str(opt_file)]
+    result = image_snip.main(args)
+
+    assert result == 0
+
+    assert out_file.exists()
+
+    out_img = Image.open(out_file)
+
+    assert out_img.size == (100, 100), "Should be original size"
+
+    assert (
+        out_img.getpixel((3, 3)) == image_snip.FOOTER_BACKGROUND_RGB
+    ), "Should be default color border"
+
+    assert out_img.getpixel((4, 4)) == (255, 255, 255), "Should be original color"
