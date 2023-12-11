@@ -336,11 +336,11 @@ def test_add_a_border_default_color(tmp_path):
     dir_path.mkdir()
     out_path = dir_path / "output"
     out_path.mkdir()
-    opt_file = dir_path / "test-add-border.txt"
-    img_file = dir_path / "a.png"
-    out_file = out_path / "a-crop.png"
+    options_file = dir_path / "test-add-border.txt"
+    image_file = dir_path / "a.png"
+    output_file = out_path / "a-crop.png"
 
-    opt_file.write_text(
+    options_file.write_text(
         dedent(
             """
             output_folder: {0}
@@ -350,23 +350,23 @@ def test_add_a_border_default_color(tmp_path):
 
             {1}
             """
-        ).format(out_path, img_file)
+        ).format(out_path, image_file)
     )
-    assert opt_file.exists()
+    assert options_file.exists()
 
     #  Create a new image with white background.
     img = Image.new("RGB", (100, 100), color=(255, 255, 255))
-    img.save(img_file)
-    assert img_file.exists()
+    img.save(image_file)
+    assert image_file.exists()
 
-    args = [str(opt_file)]
+    args = [str(options_file)]
     result = image_snip.main(args)
 
     assert result == 0
 
-    assert out_file.exists()
+    assert output_file.exists()
 
-    out_img = Image.open(out_file)
+    out_img = Image.open(output_file)
 
     assert out_img.size == (100, 100), "Should be original size"
 
@@ -375,3 +375,42 @@ def test_add_a_border_default_color(tmp_path):
     ), "Should be default color border"
 
     assert out_img.getpixel((4, 4)) == (255, 255, 255), "Should be original color"
+
+
+def test_output_format(tmp_path):
+    dir_path = tmp_path / "test_output_format"
+    dir_path.mkdir()
+    out_path = dir_path / "output"
+    out_path.mkdir()
+    options_file = dir_path / "test-output-format.txt"
+    #  Source image is .png
+    image_file = dir_path / "a.png"
+    #  Output image should be .jpg
+    output_file = out_path / "a-crop.jpg"
+
+    options_file.write_text(
+        dedent(
+            """
+            output_folder: {0}
+
+            output_format: JPG
+
+            crop_to_box(10, 10, 90, 90)
+
+            {1}
+            """
+        ).format(out_path, image_file)
+    )
+    assert options_file.exists()
+
+    #  Create a new image with white background.
+    img = Image.new("RGB", (100, 100), color=(255, 255, 255))
+    img.save(image_file)
+    assert image_file.exists()
+
+    args = [str(options_file)]
+    result = image_snip.main(args)
+
+    assert result == 0
+
+    assert output_file.exists()

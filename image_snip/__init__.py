@@ -13,7 +13,7 @@ from textwrap import dedent
 from typing import List
 
 
-__version__ = "0.1.dev5"
+__version__ = "0.1.dev6"
 
 app_label = f"image_snip (v{__version__})"
 
@@ -508,9 +508,9 @@ def get_opts(arglist=None) -> AppOptions:
 
     if output_format:
         #  If output_format was specified, narrow it down to JPG or PNG.
-        if output_format.upper in ["JPG", "JPEG"]:
+        if output_format.upper() in ["JPG", "JPEG"]:
             output_format = "JPG"
-        elif output_format.upper == "PNG":
+        elif output_format.upper() == "PNG":
             output_format = "PNG"
         else:
             print(
