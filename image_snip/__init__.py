@@ -13,7 +13,7 @@ from textwrap import dedent
 from typing import List
 
 
-__version__ = "0.1.dev6"
+__version__ = "0.1.dev7"
 
 app_label = f"image_snip (v{__version__})"
 
