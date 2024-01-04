@@ -1,19 +1,19 @@
 #!/usr/bin/env python3
 
+from __future__ import annotations
+
 import argparse
 import io
 import sys
-
-from collections import namedtuple
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
-from PIL import Image, ImageDraw, ImageFont
 from textwrap import dedent
-from typing import List
+from typing import NamedTuple
 
+from PIL import Image, ImageDraw, ImageFont
 
-__version__ = "0.1.dev7"
+__version__ = "0.1.dev8"
 
 app_label = f"image_snip (v{__version__})"
 
@@ -29,16 +29,21 @@ class FileInfo:
     text: str = None
 
 
-AppOptions = namedtuple(
-    "AppOptions",
-    "proc_list, files, output_dir, output_format, timestamp_mode, gif_ms,"
-    "do_overwrite, text_font, text_size, text_numbering",
-)
+class AppOptions(NamedTuple):
+    proc_list: list[str]
+    files: list[FileInfo]
+    output_dir: str
+    output_format: str
+    timestamp_mode: int
+    gif_ms: int
+    do_overwrite: bool
+    text_font: str
+    text_size: int
+    text_numbering: int
 
 
 def get_new_size_zoom(current_size, target_size):
-    """
-    Returns size (width, height) to scale image so
+    """Returns size (width, height) to scale image so
     smallest dimension fits target size.
     """
     scale_w = target_size[0] / current_size[0]
@@ -242,13 +247,14 @@ def extract_border_attrs(s: str):
     #  TODO: Replace assert with validation check and error message.
     a = s.strip(")").split("(")
     assert len(a) == 2
+
     if "," in a[1]:
         b = [int(x) for x in a[1].split(",")]
         assert len(b) == 4
         return b[0], (b[1], b[2], b[3])
-    else:
-        #  Default border color same as text footer background color.
-        return (int(a[1]), FOOTER_BACKGROUND_RGB)
+
+    #  Default border color same as text footer background color.
+    return (int(a[1]), FOOTER_BACKGROUND_RGB)
 
 
 def extract_target_box(proc: str):
@@ -347,11 +353,11 @@ def write_template_lines(file_path):
     are appended to the file.
     """
     print(f"Writing template lines to '{file_path}'")
-    with open(file_path, "a") as f:
+    with Path(file_path).open("a") as f:
         f.write(
             dedent(
                 """
-                    #--- Available options:
+                    # --- image_snip --- Available options:
 
                     # output_folder:
 
@@ -361,7 +367,7 @@ def write_template_lines(file_path):
                         # 1 = Add date_time to file name, to the second.
                         # 2 = Add date_time to file name, to the microsecond.
 
-                    #--- Available process instructions:
+                    # --- Available process instructions:
 
                     # crop_from_left_top(width, height)
 
@@ -377,9 +383,11 @@ def write_template_lines(file_path):
 
                     # crop_zoom(width, height)
 
-                    # border(width)  # Default color
+                    # --- border with default color
+                    # border(width)
 
-                    # border(width, red, green, blue)  # Specify RGB color.
+                    # --- border - specify RGB color
+                    # border(width, red, green, blue)
 
                     # animated_gif(duration_milliseconds)
 
@@ -393,6 +401,7 @@ def write_template_lines(file_path):
                     #      If adding text_footers, put the text (caption) on the
                     #      line above the image file name, and begin that line
                     #      with the '>' character to indicate a caption.
+
                 """
             )
         )
@@ -435,7 +444,7 @@ def get_opts(arglist=None) -> AppOptions:
 
     print(f"Reading options from '{opt_file}'.")
 
-    files: List[FileInfo] = []
+    files: list[FileInfo] = []
     proc_list = []
     output_dir = ""
     output_format = ""
@@ -448,7 +457,7 @@ def get_opts(arglist=None) -> AppOptions:
     error_list = []
     caption = ""
 
-    with open(opt_file, "r") as f:
+    with Path(opt_file).open() as f:
         for line in f.readlines():
             s = line.strip().strip("'\"")
             if s and (not s.startswith("#")):
@@ -495,7 +504,7 @@ def get_opts(arglist=None) -> AppOptions:
 
     if not (proc_list or gif_ms or text_font):
         sys.stderr.write(
-            "ERROR: Options file did not contain any process " "instructions.\n"
+            "\nERROR: Options file did not contain any process instructions.\n"
         )
         sys.exit(1)
 
@@ -519,7 +528,7 @@ def get_opts(arglist=None) -> AppOptions:
             )
             output_format = "PNG"
 
-    opts = AppOptions(
+    return AppOptions(
         proc_list,
         files,
         output_dir,
@@ -531,8 +540,6 @@ def get_opts(arglist=None) -> AppOptions:
         text_size,
         text_numbering,
     )
-
-    return opts
 
 
 def make_gif(gif_ms, image_list, out_path):
@@ -599,15 +606,9 @@ def get_est_text_ht(font, font_size, pad_px=20):
     temp_img = Image.new("RGB", (400, 400))
     draw = ImageDraw.Draw(temp_img)
     font_len = int(draw.textlength("M", font=font, font_size=font_size))
-    px = font_len + pad_px
 
-    # # For testing:
-    # temp_img = Image.new("RGB", (px, px))
-    # draw = ImageDraw.Draw(temp_img)
-    # draw.text((0, 0), "M", font=font, fill=(255, 255, 255, 255))
-    # temp_img.save("test.jpg")
+    return font_len + pad_px
 
-    return px
 
 
 def add_text_footer(image, text, font, font_size, numbering, file_num, file_count):
@@ -707,7 +708,7 @@ def main(arglist=None):
         img.paste(src, (0, 0))
 
         if not opts.proc_list:
-            if 0 < opts.gif_ms:
+            if opts.gif_ms > 0:
                 gif_images.append(str(file_info.path))
         else:
             for proc in opts.proc_list:
@@ -785,7 +786,7 @@ def main(arglist=None):
 
             img.save(file_name)
 
-            if 0 < opts.gif_ms:
+            if opts.gif_ms > 0:
                 gif_images.append(file_name)
 
     if gif_images:

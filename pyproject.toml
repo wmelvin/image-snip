@@ -34,3 +34,31 @@ pythonpath = ["."]
 
 [project.scripts]
 image_snip = "image_snip:main"
+
+[tool.ruff]
+line-length = 88
+indent-width = 4
+extend-exclude = ["tests"]
+
+[tool.ruff.lint]
+# flake8-builtins (A)
+# flake8-bugbear (B)
+# flake8-comprehensions (C4)
+# pycodestyle errors (E)
+# Pyfakes (F)
+# flake8-future-annotations (FA)
+# isort (I)
+# flake8-implicit-str-concat (ISC)
+# Perflint (PERF)
+# flake8-use-pathlib (PTH)
+# flake8-pyi (PYI)
+# flake8-return (RET)
+# flake8-bandit (S)
+# flake8-simplify (SIM)
+# Warning (W)
+select = ["A", "B", "C4", "E", "F", "FA", "I", "ISC", "PERF", "PTH", "PYI", "RET", "S", "SIM", "W"]
+# select = ["ALL"]
+
+[tool.ruff.extend-per-file-ignores]
+# Permit use of assert.
+"__init__.py" = ["S101"]

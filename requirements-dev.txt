@@ -1,6 +1,4 @@
-black
 build
-flake8
 pip-tools
 pytest
 ruff

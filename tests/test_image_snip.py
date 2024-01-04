@@ -1,12 +1,11 @@
 import shutil
-
 from datetime import datetime
 from pathlib import Path
-from PIL import Image, ImageFont
 from textwrap import dedent
 
-import image_snip
+from PIL import Image, ImageFont
 
+import image_snip
 
 test_source_image = Path("./images/example-1-1920x1440.jpg")
 
