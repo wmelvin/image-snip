@@ -13,7 +13,7 @@ from typing import NamedTuple
 
 from PIL import Image, ImageDraw, ImageFont
 
-__version__ = "0.1.dev8"
+__version__ = "0.1.dev9"
 
 app_label = f"image_snip (v{__version__})"
 
@@ -21,6 +21,9 @@ app_label = f"image_snip (v{__version__})"
 FOOTER_PAD_PX = 10
 FOOTER_FOREGROUND_RGB = (255, 255, 255)
 FOOTER_BACKGROUND_RGB = (25, 25, 112)
+
+TIMESTAMP_SEC = 1  # Add date_time to file name, to the second.
+TIMESTAMP_MIC = 2  # Add date_time to file name, to the microsecond.
 
 
 @dataclass
@@ -159,9 +162,9 @@ def get_output_name(
 
     p = Path(input_name)
 
-    if timestamp_mode == 1:
+    if timestamp_mode == TIMESTAMP_SEC:
         file_stem = f"{p.stem}-{datetime.now().strftime('%Y%m%d_%H%M%S')}"
-    elif timestamp_mode == 2:
+    elif timestamp_mode == TIMESTAMP_MIC:
         file_stem = f"{p.stem}-{datetime.now().strftime('%Y%m%d_%H%M%S_%f')}"
     else:
         file_stem = f"{p.stem}-crop"
@@ -464,33 +467,46 @@ def get_opts(arglist=None) -> AppOptions:
                 if s.startswith(("crop_", "border(")) and s.endswith(")"):
                     #  Process instruction.
                     proc_list.append(s)
-                elif s.startswith("text_footers(") and s.endswith(")"):
+                    continue
+
+                if s.startswith("text_footers(") and s.endswith(")"):
                     #  Instruction to add text to the bottom of the image.
                     text_font, text_size, text_numbering = extract_text_param(s)
                     proc_list.append(s)
-                elif s.startswith("animated_gif(") and s.endswith(")"):
+                    continue
+
+                if s.startswith("animated_gif(") and s.endswith(")"):
                     #  Instruction to make an animated GIF.
                     gif_ms = extract_gif_param(s)
-                elif s.startswith("output_folder:"):
+                    continue
+
+                if s.startswith("output_folder:"):
                     #  Output folder/directory option.
                     output_dir = get_opt_str(s)
-                elif s.startswith("output_format:"):
+                    continue
+
+                if s.startswith("output_format:"):
                     #  Output format: JPG, JPEG, or PNG.
                     output_format = get_opt_str(s)
-                elif s.startswith("timestamp_mode:"):
+                    continue
+
+                if s.startswith("timestamp_mode:"):
                     #  Mode for adding a timestamp to the output file name.
                     timestamp_mode = int(get_opt_str(s))
-                elif s.startswith(">"):
+                    continue
+
+                if s.startswith(">"):
                     #  Footer caption to add to subsequent images.
                     #  A line with only '>' clears the text.
                     caption = s[1:].strip(" '\"")
+                    continue
+
+                #  Image file path.
+                p = Path(s).expanduser().resolve()
+                if p.exists():
+                    files.append(FileInfo(p, caption))
                 else:
-                    #  Image file path.
-                    p = Path(s).expanduser().resolve()
-                    if p.exists():
-                        files.append(FileInfo(p, caption))
-                    else:
-                        error_list.append(f"File not found: '{p}'")
+                    error_list.append(f"File not found: '{p}'")
 
     if error_list:
         sys.stderr.write("ERRORS:\n")
