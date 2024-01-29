@@ -51,7 +51,7 @@ select = [
     "I",    # isort
     "ISC",  # flake8-implicit-str-concat
     "PERF", # Perflint
-    # "PL",   # Pylint
+    "PL",   # Pylint
     "PTH",  # flake8-use-pathlib
     "PYI",  # flake8-pyi
     "RET",  # flake8-return
@@ -59,8 +59,14 @@ select = [
     "SIM",  # flake8-simplify
     "W"     # Warning
 ]
-# select = ["ALL"]
+ignore = ["ISC001"]
+# extend-select = ["ALL"]
 
 [tool.ruff.extend-per-file-ignores]
-# Permit use of assert.
-"__init__.py" = ["S101"]
+"__init__.py" = [
+  "S101",    # assert
+  "PLR0912", # too many branches
+  "PLR0913", # too many args in func def
+  "PLR0915", # too many statements
+  "PLR2004", # magic value
+]

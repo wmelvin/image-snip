@@ -13,7 +13,7 @@ from typing import NamedTuple
 
 from PIL import Image, ImageDraw, ImageFont
 
-__version__ = "0.1.dev9"
+__version__ = "2024.01.1"
 
 app_label = f"image_snip (v{__version__})"
 
@@ -624,7 +624,6 @@ def get_est_text_ht(font, font_size, pad_px=20):
     font_len = int(draw.textlength("M", font=font, font_size=font_size))
 
     return font_len + pad_px
-
 
 
 def add_text_footer(image, text, font, font_size, numbering, file_num, file_count):
