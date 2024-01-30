@@ -14,38 +14,40 @@ test_source_image_3 = Path("./images/example-3-400x400.jpg")
 test_source_image_4 = Path("./images/example-4-400x400.jpg")
 
 
-def get_test_opts_and_img(opt_path: Path, process_instruction: str, image_tag: str):
+def get_test_opts_and_img(test_path: Path, process_instruction: str, image_tag: str):
     """
     Returns (options_file_path, expected_test_image_path).
     """
-    d = opt_path / "testopts"
+    opt_dir = test_path / "testopts"
+    opt_dir.mkdir()
 
-    d.mkdir()
+    out_dir = test_path / "output"
+    out_dir.mkdir()
 
     #  Make a copy of the test image.
     test_image_name = (
         f"test-{image_tag}-{datetime.now().strftime('%Y%m%d_%H%M%S_%f')}.jpg"
     )
 
-    dst = d / test_image_name
+    test_image_file = opt_dir / test_image_name
 
-    shutil.copyfile(test_source_image, dst)
+    shutil.copyfile(test_source_image, test_image_file)
 
-    opt_file = d / "test-options.txt"
+    opt_file = opt_dir / "test-options.txt"
 
     opt_file.write_text(
         dedent(
             """
-            output_folder: ./output/tests
+            output_folder: {2}
             # timestamp_mode:
             {0}
             {1}
             """
-        ).format(process_instruction, dst)
+        ).format(process_instruction, test_image_file, out_dir)
     )
     assert opt_file.exists()
 
-    expect_image = Path("./output/tests") / f"{dst.stem}-crop.jpg"
+    expect_image = out_dir / f"{test_image_file.stem}-crop.jpg"
 
     return (opt_file, expect_image)
 
@@ -171,14 +173,16 @@ def test_crop_right_bottom(tmp_path):
 
 
 def test_options(tmp_path):
-    d = tmp_path / "testopts"
-    d.mkdir()
-    p = d / "test-options.txt"
-    p.write_text(
+    out_dir = tmp_path / "output"
+    out_dir.mkdir()
+    opt_dir = tmp_path / "testopts"
+    opt_dir.mkdir()
+    opt_file = opt_dir / "test-options.txt"
+    opt_file.write_text(
         dedent(
             """
             #  test-options
-            output_folder: ./output/tests
+            output_folder: {1}
             timestamp_mode: 2
 
             crop_from_center(960, 960)
@@ -190,25 +194,27 @@ def test_options(tmp_path):
 
             {0}
             """
-        ).format(test_source_image)
+        ).format(test_source_image, out_dir)
     )
-    assert p.exists()
+    assert opt_file.exists()
 
-    args = [str(p)]
+    args = [str(opt_file)]
     result = image_snip.main(args)
 
     assert result == 0
 
 
 def test_animated_gif(tmp_path):
-    d = tmp_path / "testopts"
-    d.mkdir()
-    p = d / "test-animated-gif.txt"
-    p.write_text(
+    out_dir = tmp_path / "output"
+    out_dir.mkdir()
+    opt_dir = tmp_path / "testopts"
+    opt_dir.mkdir()
+    opt_file = opt_dir / "test-animated-gif.txt"
+    opt_file.write_text(
         dedent(
             """
             #  test-animated-gif
-            output_folder: ./output/tests
+            output_folder: {3}
             timestamp_mode: 2
 
             crop_from_left_top(300, 300)
@@ -219,25 +225,27 @@ def test_animated_gif(tmp_path):
             {1}
             {2}
             """
-        ).format(test_source_image_2, test_source_image_3, test_source_image_4)
+        ).format(test_source_image_2, test_source_image_3, test_source_image_4, out_dir)
     )
-    assert p.exists()
+    assert opt_file.exists()
 
-    args = [str(p)]
+    args = [str(opt_file)]
     result = image_snip.main(args)
 
     assert result == 0
 
 
 def test_animated_gif_only(tmp_path):
-    d = tmp_path / "testopts"
-    d.mkdir()
-    p = d / "test-animated-gif-only.txt"
-    p.write_text(
+    out_dir = tmp_path / "output"
+    out_dir.mkdir()
+    opt_dir = tmp_path / "testopts"
+    opt_dir.mkdir()
+    opt_file = opt_dir / "test-animated-gif-only.txt"
+    opt_file.write_text(
         dedent(
             """
             #  test-animated-gif-only
-            output_folder: ./output/tests
+            output_folder: {3}
             timestamp_mode: 2
 
             animated_gif(2000)
@@ -246,11 +254,11 @@ def test_animated_gif_only(tmp_path):
             {1}
             {2}
             """
-        ).format(test_source_image_2, test_source_image_3, test_source_image_4)
+        ).format(test_source_image_2, test_source_image_3, test_source_image_4, out_dir)
     )
-    assert p.exists()
+    assert opt_file.exists()
 
-    args = [str(p)]
+    args = [str(opt_file)]
     result = image_snip.main(args)
 
     assert result == 0

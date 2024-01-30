@@ -1,13 +1,17 @@
 @default:
   @just --list
 
-# test lint check pyproject-build
+# Run test, lint, check, pyproject-build
 @build: test lint check
   pipenv run pyproject-build
 
-# ruff format --check
+# Run ruff format --check
 @check:
   pipenv run ruff format --check
+
+# Run check, lint, pipenv check
+@checks: check lint
+  pipenv check
 
 # Remove dist and egg-info
 @clean:
@@ -16,14 +20,14 @@
   rm image_snip.egg-info/*
   rmdir image_snip.egg-info
 
-# ruff format
+# Run ruff format (may change files)
 @format:
   pipenv run ruff format
 
-# ruff check
+# Run ruff check
 @lint:
   pipenv run ruff check
 
-# pytest
+# Run pytest
 @test:
   pipenv run pytest
