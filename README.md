@@ -62,6 +62,14 @@ Add a border with a given width in pixels and a specified RGB color:
 
 - `border(width, red, green, blue)`
 
+Round the corners with the given radius and padding (pixels) and a transparent background:
+
+- `rounded(radius, padding)`
+
+Round the corners with the given radius and padding (pixels) and a specified RGB background color:
+
+- `rounded(radius, padding, red, green, blue)`
+
 Create an animated GIF using all images with the given display *duration* (in milliseconds) for each frame. The GIF file is created after all other instructions have been applied to the list of images, and the modified versions of those images have been saved. It is given the same file name as the last image in the list but with a *.gif* extension.
 
 - `animated_gif(duration)`
@@ -141,7 +149,7 @@ positional arguments:
   opt_file     Name of 'options file' containing a list of process
                instructions and image file names, one per line.
 
-optional arguments:
+options:
   -h, --help   show this help message and exit
   --overwrite  Overwrite existing output files. By default, existing files are
                not replaced.

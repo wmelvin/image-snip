@@ -1,6 +1,7 @@
 # Private archives, notes, etc.
 private/
 notes-private.txt
+xplor/
 
 # Python.
 venv/

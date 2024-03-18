@@ -421,3 +421,99 @@ def test_output_format(tmp_path):
     assert result == 0
 
     assert output_file.exists()
+
+
+def test_rounded_transparent_border(tmp_path):
+    dir_path = tmp_path / "test_rounded"
+    dir_path.mkdir()
+    out_path = dir_path / "output"
+    out_path.mkdir()
+    opt_file = dir_path / "test-add-rounded.txt"
+    img_file = dir_path / "a.jpg"
+    out_file = out_path / "a-crop.png"
+
+    opt_file.write_text(
+        dedent(
+            """
+            output_folder: {0}
+
+            output_format: PNG
+
+            # corner_radius=8, padding=2
+            rounded(8, 2)
+
+            {1}
+            """
+        ).format(out_path, img_file)
+    )
+    assert opt_file.exists()
+
+    #  Create a new image with white background.
+    img = Image.new("RGB", (100, 100), color=(255, 255, 255))
+    img.save(img_file)
+    assert img_file.exists()
+
+    args = [str(opt_file)]
+    result = image_snip.main(args)
+
+    assert result == 0
+
+    assert out_file.exists()
+
+    out_img = Image.open(out_file)
+
+    assert out_img.size == (100, 100), "Should be original size"
+
+    px = out_img.getpixel((8, 8))
+    assert px == (255, 255, 255, 255), "Should be original color"
+
+    px = out_img.getpixel((1, 1))
+    assert px == (0, 0, 0, 0), "Should be transparent"
+
+
+def test_rounded_green_border(tmp_path):
+    dir_path = tmp_path / "test_rounded"
+    dir_path.mkdir()
+    out_path = dir_path / "output"
+    out_path.mkdir()
+    opt_file = dir_path / "test-add-rounded.txt"
+    img_file = dir_path / "a.jpg"
+    out_file = out_path / "a-crop.png"
+
+    opt_file.write_text(
+        dedent(
+            """
+            output_folder: {0}
+
+            output_format: PNG
+
+            # corner_radius=8, padding=2, RGB=(0, 255, 0)
+            rounded(8, 2, 0, 255, 0)
+
+            {1}
+            """
+        ).format(out_path, img_file)
+    )
+    assert opt_file.exists()
+
+    #  Create a new image with white background.
+    img = Image.new("RGB", (100, 100), color=(255, 255, 255))
+    img.save(img_file)
+    assert img_file.exists()
+
+    args = [str(opt_file)]
+    result = image_snip.main(args)
+
+    assert result == 0
+
+    assert out_file.exists()
+
+    out_img = Image.open(out_file)
+
+    assert out_img.size == (100, 100), "Should be original size"
+
+    px = out_img.getpixel((8, 8))
+    assert px == (255, 255, 255), "Should be original color"
+
+    px = out_img.getpixel((1, 1))
+    assert px == (0, 255, 0), "Should be green"

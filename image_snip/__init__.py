@@ -11,9 +11,9 @@ from pathlib import Path
 from textwrap import dedent
 from typing import NamedTuple
 
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image, ImageDraw, ImageFilter, ImageFont
 
-__version__ = "2024.01.1"
+__version__ = "2024.03.1"
 
 app_label = f"image_snip (v{__version__})"
 
@@ -260,6 +260,30 @@ def extract_border_attrs(s: str):
     return (int(a[1]), FOOTER_BACKGROUND_RGB)
 
 
+def extract_rounded_attrs(s: str):
+    """
+    Extract the attributes for adding a rounded border to an image.
+    Return (raduis, padding, (R, G, B)) or (raduis, padding, None)
+    for transparent background.
+    """
+    a = s.strip(")").split("(")
+    if len(a) != 2:
+        return (None, None, None)
+
+    if "," not in a[1]:
+        return (None, None, None)
+
+    b = [int(x) for x in a[1].split(",")]
+
+    if len(b) == 5:
+        return b[0], b[1], (b[2], b[3], b[4])
+
+    if len(b) == 2:
+        return b[0], b[1], None
+
+    return (None, None, None)
+
+
 def extract_target_box(proc: str):
     """
     Extracts target box as a tuple of 4 integers (x1, y1, x2, y2) from
@@ -392,6 +416,12 @@ def write_template_lines(file_path):
                     # --- border - specify RGB color
                     # border(width, red, green, blue)
 
+                    # --- rounded border with transparent background
+                    # rounded(radius, padding)
+
+                    # --- rounded border - specify RGB background color
+                    # rounded(radius, padding, red, green, blue)
+
                     # animated_gif(duration_milliseconds)
 
                     # text_footers("font-file-name", font-size, numbering)
@@ -464,7 +494,7 @@ def get_opts(arglist=None) -> AppOptions:
         for line in f.readlines():
             s = line.strip().strip("'\"")
             if s and (not s.startswith("#")):
-                if s.startswith(("crop_", "border(")) and s.endswith(")"):
+                if s.startswith(("crop_", "border(", "rounded(")) and s.endswith(")"):
                     #  Process instruction.
                     proc_list.append(s)
                     continue
@@ -676,6 +706,30 @@ def add_border(src: Image.Image, proc):
     return img
 
 
+def add_rounded_border(src: Image.Image, proc) -> Image.Image:
+    corner_radius, padding, rgb = extract_rounded_attrs(proc)
+
+    if rgb is None:
+        bg_img = Image.new("RGBA", src.size, (0, 0, 0, 0))
+    else:
+        bg_img = Image.new("RGB", src.size, rgb)
+
+    mask = Image.new("L", src.size, 0)
+
+    draw = ImageDraw.Draw(mask)
+
+    draw.rounded_rectangle(
+        (padding, padding, src.size[0] - padding, src.size[1] - padding),
+        radius=corner_radius,
+        fill=255,
+    )
+
+    blur_radius = 1  # Smooth the corners a bit.
+    mask = mask.filter(ImageFilter.GaussianBlur(radius=blur_radius))
+
+    return Image.composite(src, bg_img, mask)
+
+
 def main(arglist=None):
     print(f"\n{app_label}\n")
 
@@ -766,6 +820,9 @@ def main(arglist=None):
 
                 elif proc.startswith("border("):
                     img = add_border(img, proc)
+
+                elif proc.startswith("rounded("):
+                    img = add_rounded_border(img, proc)
 
                 elif proc.startswith("text_footers("):
                     if opts.text_font:
