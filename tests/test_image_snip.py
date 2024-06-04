@@ -203,6 +203,9 @@ def test_options(tmp_path):
 
     assert result == 0
 
+    files = list(out_dir.glob("image_snip_options-*.txt"))
+    assert files
+
 
 def test_animated_gif(tmp_path):
     out_dir = tmp_path / "output"

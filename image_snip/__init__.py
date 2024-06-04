@@ -13,7 +13,7 @@ from typing import NamedTuple
 
 from PIL import Image, ImageDraw, ImageFilter, ImageFont
 
-__version__ = "2024.03.1"
+__version__ = "2024.06.1"
 
 app_label = f"image_snip (v{__version__})"
 
@@ -33,6 +33,7 @@ class FileInfo:
 
 
 class AppOptions(NamedTuple):
+    opts_text: str
     proc_list: list[str]
     files: list[FileInfo]
     output_dir: str
@@ -490,53 +491,54 @@ def get_opts(arglist=None) -> AppOptions:
     error_list = []
     caption = ""
 
-    with Path(opt_file).open() as f:
-        for line in f.readlines():
-            s = line.strip().strip("'\"")
-            if s and (not s.startswith("#")):
-                if s.startswith(("crop_", "border(", "rounded(")) and s.endswith(")"):
-                    #  Process instruction.
-                    proc_list.append(s)
-                    continue
+    opt_text = Path(opt_file).read_text()
 
-                if s.startswith("text_footers(") and s.endswith(")"):
-                    #  Instruction to add text to the bottom of the image.
-                    text_font, text_size, text_numbering = extract_text_param(s)
-                    proc_list.append(s)
-                    continue
+    for line in opt_text.splitlines():
+        s = line.strip().strip("'\"")
+        if s and (not s.startswith("#")):
+            if s.startswith(("crop_", "border(", "rounded(")) and s.endswith(")"):
+                #  Process instruction.
+                proc_list.append(s)
+                continue
 
-                if s.startswith("animated_gif(") and s.endswith(")"):
-                    #  Instruction to make an animated GIF.
-                    gif_ms = extract_gif_param(s)
-                    continue
+            if s.startswith("text_footers(") and s.endswith(")"):
+                #  Instruction to add text to the bottom of the image.
+                text_font, text_size, text_numbering = extract_text_param(s)
+                proc_list.append(s)
+                continue
 
-                if s.startswith("output_folder:"):
-                    #  Output folder/directory option.
-                    output_dir = get_opt_str(s)
-                    continue
+            if s.startswith("animated_gif(") and s.endswith(")"):
+                #  Instruction to make an animated GIF.
+                gif_ms = extract_gif_param(s)
+                continue
 
-                if s.startswith("output_format:"):
-                    #  Output format: JPG, JPEG, or PNG.
-                    output_format = get_opt_str(s)
-                    continue
+            if s.startswith("output_folder:"):
+                #  Output folder/directory option.
+                output_dir = get_opt_str(s)
+                continue
 
-                if s.startswith("timestamp_mode:"):
-                    #  Mode for adding a timestamp to the output file name.
-                    timestamp_mode = int(get_opt_str(s))
-                    continue
+            if s.startswith("output_format:"):
+                #  Output format: JPG, JPEG, or PNG.
+                output_format = get_opt_str(s)
+                continue
 
-                if s.startswith(">"):
-                    #  Footer caption to add to subsequent images.
-                    #  A line with only '>' clears the text.
-                    caption = s[1:].strip(" '\"")
-                    continue
+            if s.startswith("timestamp_mode:"):
+                #  Mode for adding a timestamp to the output file name.
+                timestamp_mode = int(get_opt_str(s))
+                continue
 
-                #  Image file path.
-                p = Path(s).expanduser().resolve()
-                if p.exists():
-                    files.append(FileInfo(p, caption))
-                else:
-                    error_list.append(f"File not found: '{p}'")
+            if s.startswith(">"):
+                #  Footer caption to add to subsequent images.
+                #  A line with only '>' clears the text.
+                caption = s[1:].strip(" '\"")
+                continue
+
+            #  Image file path.
+            p = Path(s).expanduser().resolve()
+            if p.exists():
+                files.append(FileInfo(p, caption))
+            else:
+                error_list.append(f"File not found: '{p}'")
 
     if error_list:
         sys.stderr.write("ERRORS:\n")
@@ -575,6 +577,7 @@ def get_opts(arglist=None) -> AppOptions:
             output_format = "PNG"
 
     return AppOptions(
+        opt_text,
         proc_list,
         files,
         output_dir,
@@ -752,9 +755,9 @@ def main(arglist=None):
             print("WARNING: No font size specified.")
             return 1
 
+    dt = datetime.now().strftime("%Y%m%d_%H%M%S")
     if not opts.output_dir:
         #  Default to a new directory under the first image files's parent.
-        dt = datetime.now().strftime("%Y%m%d_%H%M%S")
         out_path = opts.files[0].path.parent / f"crop_{dt}"
         assert not out_path.exists()
         out_path.mkdir()
@@ -764,6 +767,8 @@ def main(arglist=None):
 
     #  TODO: Replace assert with validation check and error message.
     assert out_path.exists()
+
+    (out_path / f"image_snip_options-{dt}.txt").write_text(opts.opts_text)
 
     gif_images = []
 
