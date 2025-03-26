@@ -62,7 +62,7 @@ select = [
 ignore = ["ISC001"]
 # extend-select = ["ALL"]
 
-[tool.ruff.extend-per-file-ignores]
+[tool.ruff.lint.extend-per-file-ignores]
 "__init__.py" = [
   "S101",    # assert
   "PLR0912", # too many branches

@@ -520,3 +520,46 @@ def test_rounded_green_border(tmp_path):
 
     px = out_img.getpixel((1, 1))
     assert px == (0, 255, 0), "Should be green"
+
+
+def test_new_name_one_file(tmp_path):
+    opt, img = get_test_opts_and_img(
+        tmp_path, "crop_zoom(300, 300)", "old_file_name"
+    )
+
+    # Add the new_name option to the options file.
+    s = opt.read_text()
+    s = f"new_name: new-image-name\n{s}"
+    opt.write_text(s)
+
+    args = [str(opt)]
+    result = image_snip.main(args)
+    assert result == 0
+
+    expect_img = img.with_stem("new-image-name")
+    assert expect_img.exists()
+    expected_size = (300, 300)
+    assert Image.open(expect_img).size == expected_size
+
+
+def test_new_name_multiple_files(tmp_path):
+    opt, img = get_test_opts_and_img(
+        tmp_path, "crop_zoom(300, 300)", "old_file_name"
+    )
+
+    # Add the new_name option, and a second file, to the options file.
+    s = opt.read_text()
+    s = f"new_name: new-image-name\n{s}"
+    s += f"\n{test_source_image_2}"
+    opt.write_text(s)
+
+    args = [str(opt)]
+    result = image_snip.main(args)
+    assert result == 0
+
+    expect_img1 = img.with_stem("new-image-name-001")
+    assert expect_img1.exists()
+    expected_size = (300, 300)
+    assert Image.open(expect_img1).size == expected_size
+    expect_img2 = img.with_stem("new-image-name-002")
+    assert expect_img2.exists()

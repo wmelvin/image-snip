@@ -13,7 +13,7 @@ from typing import NamedTuple
 
 from PIL import Image, ImageDraw, ImageFilter, ImageFont
 
-__version__ = "2024.06.1"
+__version__ = "2025.03.1"
 
 app_label = f"image_snip (v{__version__})"
 
@@ -37,6 +37,7 @@ class AppOptions(NamedTuple):
     proc_list: list[str]
     files: list[FileInfo]
     output_dir: str
+    new_name: str
     output_format: str
     timestamp_mode: int
     gif_ms: int
@@ -145,9 +146,12 @@ def crop_box_right_bottom(current_size, target_size):
     return (x1, y1, x2, y2)
 
 
+# def get_output_name(
+#     output_path: Path, output_format: str, input_name: str, timestamp_mode: int
+# ):
 def get_output_name(
-    output_path: Path, output_format: str, input_name: str, timestamp_mode: int
-):
+    output_path: Path, input_name: str, opts: AppOptions, file_num: int
+) -> str:
     """
     Returns the full path for the output file based on the name of the source
     image file.
@@ -163,16 +167,28 @@ def get_output_name(
 
     p = Path(input_name)
 
-    if timestamp_mode == TIMESTAMP_SEC:
-        file_stem = f"{p.stem}-{datetime.now().strftime('%Y%m%d_%H%M%S')}"
-    elif timestamp_mode == TIMESTAMP_MIC:
-        file_stem = f"{p.stem}-{datetime.now().strftime('%Y%m%d_%H%M%S_%f')}"
+    if opts.new_name:
+        if len(opts.files) > 1:
+            file_stem = f"{opts.new_name}-{file_num:03d}"
+        else:
+            file_stem = opts.new_name
     else:
+        file_stem = p.stem
+
+    #  Add a date_time tag to the file name if specified.
+    #  Otherwise, append "-crop" to the file name, unless
+    #  new_name is specified.
+
+    if opts.timestamp_mode == TIMESTAMP_SEC:
+        file_stem = f"{file_stem}-{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+    elif opts.timestamp_mode == TIMESTAMP_MIC:
+        file_stem = f"{file_stem}-{datetime.now().strftime('%Y%m%d_%H%M%S_%f')}"
+    elif len(opts.new_name) == 0:
         file_stem = f"{p.stem}-crop"
 
-    if output_format:
-        assert output_format in ["JPG", "PNG"]
-        ext = f".{output_format.lower()}"
+    if opts.output_format:
+        assert opts.output_format in ["JPG", "PNG"]
+        ext = f".{opts.output_format.lower()}"
     else:
         ext = p.suffix
 
@@ -389,6 +405,10 @@ def write_template_lines(file_path):
 
                     # output_folder:
 
+                    # --- Give files a new name. If more than one file, a sequence
+                    #     number will be added to the file name.
+                    # new_name:
+
                     # output_format: JPG | PNG
 
                     # timestamp_mode:
@@ -481,6 +501,7 @@ def get_opts(arglist=None) -> AppOptions:
     files: list[FileInfo] = []
     proc_list = []
     output_dir = ""
+    new_name = ""
     output_format = ""
     timestamp_mode = 0
     gif_ms = 0
@@ -515,6 +536,11 @@ def get_opts(arglist=None) -> AppOptions:
             if s.startswith("output_folder:"):
                 #  Output folder/directory option.
                 output_dir = get_opt_str(s)
+                continue
+
+            if s.startswith("new_name:"):
+                #  New file name option.
+                new_name = get_opt_str(s)
                 continue
 
             if s.startswith("output_format:"):
@@ -581,6 +607,7 @@ def get_opts(arglist=None) -> AppOptions:
         proc_list,
         files,
         output_dir,
+        new_name,
         output_format,
         timestamp_mode,
         gif_ms,
@@ -848,9 +875,10 @@ def main(arglist=None):
                     )
                     sys.exit(1)
 
-            file_name = get_output_name(
-                out_path, opts.output_format, file_info.path, opts.timestamp_mode
-            )
+            # file_name = get_output_name(
+            #     out_path, opts.output_format, file_info.path, opts.timestamp_mode
+            # )
+            file_name = get_output_name(out_path, file_info.path, opts, file_num)
             print(f"Saving '{file_name}'")
 
             p = Path(file_name)
