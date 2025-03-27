@@ -11,72 +11,111 @@ This is a limited application of Python and [Pillow](https://python-pillow.org/)
 
 The options file contains the following sections:
 
-- Settings
-- Process Instructions
-- Image list (one or more image file names)
+- **Settings** (settings override defaults and are optional)
+- **Process Instructions** (at least one process instruction is required)
+- **Image list** (one or more image file names)
 
 Any line starting with a pound sign (**#**) is treated as a **comment**. Only whole-line comments are supported.
 
+### Settings
+
 The following **Settings** can be specified in the options file:
 
-Save the modified images to the given folder path:
+`output_folder:` *folder-path*
 
-- `output_folder: <folder-path>`
+Save the modified images to the given folder path.
 
-Save the modified images with a different format than the original (`JPG` or `PNG` are supported):
+---
 
-- `output_format: <JPG|PNG>`
+`new_name:` *base-file-name*
+
+Give files a new name, instead of keeping the original file name in the output. If there is more than one file, a file number will be added after the base file name.
+
+---
+
+`output_format:` *JPG* or *PNG*
+
+
+Save the modified images with a different format than the original (`JPG` or `PNG` are supported).
+
+---
+
+`timestamp_mode:` *[n]*
+
 
 Add a *date_time* tag to the output file name. The setting value specifies the resolution of the time part:
-
-- `timestamp_mode: [n]`
 
 `1` = Add *date_time* to the second.
 `2` = Add *date_time* to the microsecond.
 
 If no *timestamp_mode* is specified, the output file is named with "*-crop*" appended to the source file name.
 
+
+### Process Instructions
+
 The following **Process Instructions** can be specified in the options file:
 
-These crop the image to the given *width* and *height* (in pixels) starting from the corner (or center) as stated in the instruction's name:
+`crop_from_center(width, height)`
 
-- `crop_from_center(width, height)`
-- `crop_from_left_bottom(width, height)`
-- `crop_from_left_top(width, height)`
-- `crop_from_right_bottom(width, height)`
-- `crop_from_right_top(width, height)`
+`crop_from_left_bottom(width, height)`
+
+`crop_from_left_top(width, height)`
+
+`crop_from_right_bottom(width, height)`
+
+`crop_from_right_top(width, height)`
+
+These crop the image to the given *width* and *height* (in pixels) starting from the corner (or center) as stated in the instruction's name.
+
+
+---
+
+`crop_to_box(x1, y1, x2, y2)`
 
 Crop from any part of the image using the given [box coordinates](https://pillow.readthedocs.io/en/stable/handbook/concepts.html#coordinate-system):
 
-- `crop_to_box(x1, y1, x2, y2)`
+---
+
+`crop_zoom(width, height)`
 
 Resize (zoom) the image to fill the entire target area, then crop to the given *width* and *height*:
 
-- `crop_zoom(width, height)`
+---
+
+`border(width)`
 
 Add a border with a given width in pixels (default color):
 
-- `border(width)`
+
+---
+
+`border(width, red, green, blue)`
 
 Add a border with a given width in pixels and a specified RGB color:
 
-- `border(width, red, green, blue)`
+---
+
+`rounded(radius, padding)`
 
 Round the corners with the given radius and padding (pixels) and a transparent background:
 
-- `rounded(radius, padding)`
+---
+
+`rounded(radius, padding, red, green, blue)`
 
 Round the corners with the given radius and padding (pixels) and a specified RGB background color:
 
-- `rounded(radius, padding, red, green, blue)`
+---
+
+`animated_gif(duration)`
 
 Create an animated GIF using all images with the given display *duration* (in milliseconds) for each frame. The GIF file is created after all other instructions have been applied to the list of images, and the modified versions of those images have been saved. It is given the same file name as the last image in the list but with a *.gif* extension.
 
-- `animated_gif(duration)`
+---
+
+`text_footers("font-file-name", font-size, numbering)`
 
 Add a text footer (caption):
-
-- `text_footers("font-file-name", font-size, numbering)`
 
 **font-file-name** must be the name of a font that is available on the system.
 
@@ -96,6 +135,8 @@ To add a **Caption**, put the text on the line above an image file name and begi
 
 output_folder: ./output
 
+new_name: my-cropped-image
+
 timestamp_mode: 1
 
 crop_from_left_bottom(1920, 500)
@@ -107,6 +148,8 @@ crop_zoom(600, 600)
 ```
 
 The set of one or more *process instructions* are applied to each image listed in the options file. The example above has only one image, but the original use-case for this tool had many images to which the same operations were applied. Also, the series of process instructions is just an example of combining multiple instructions. It is not a useful combination. In practice, only one or two operations are needed (perhaps one kind of *crop* and maybe a *zoom*).
+
+With the `new_name` option, the first part of the output file name will be *my-cropped-image* instead of *example-1-1920x1440*.
 
 
 **Example including animated GIF and captions:**
@@ -136,7 +179,7 @@ animated_gif(2000)
 ~/Pictures/screenshot-220207_132402.jpg
 ```
 
-## Command Line Help/Usage
+## Command Line Help / Usage
 
 ```
 usage: image_snip [-h] [--overwrite] [--template] opt_file
@@ -151,8 +194,10 @@ positional arguments:
 
 options:
   -h, --help   show this help message and exit
+  
   --overwrite  Overwrite existing output files. By default, existing files are
                not replaced.
+
   --template   Write available options, as comment lines, to the specified
                options file to use as a template. If the file already exists
                the template comments are appended to the file.

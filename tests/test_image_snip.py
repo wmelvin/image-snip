@@ -1,3 +1,4 @@
+import re
 import shutil
 from datetime import datetime
 from pathlib import Path
@@ -231,14 +232,15 @@ def test_animated_gif(tmp_path):
         ).format(test_source_image_2, test_source_image_3, test_source_image_4, out_dir)
     )
     assert opt_file.exists()
-
     args = [str(opt_file)]
     result = image_snip.main(args)
-
     assert result == 0
-
+    assert len(list(out_dir.glob("*.jpg"))) == 3, "Should be three jpg files."
+    assert len(list(out_dir.glob("*.gif"))) == 1, "Should be one gif file."
+    
 
 def test_animated_gif_only(tmp_path):
+    #  Only animated_gif, no other process instructions.
     out_dir = tmp_path / "output"
     out_dir.mkdir()
     opt_dir = tmp_path / "testopts"
@@ -260,12 +262,46 @@ def test_animated_gif_only(tmp_path):
         ).format(test_source_image_2, test_source_image_3, test_source_image_4, out_dir)
     )
     assert opt_file.exists()
-
     args = [str(opt_file)]
     result = image_snip.main(args)
-
     assert result == 0
+    assert len(list(out_dir.glob("*.jpg"))) == 0, "Should be no jpg files."
+    assert len(list(out_dir.glob("*.gif"))) == 1, "Should be one gif file."
 
+
+def test_animated_gif_new_name(tmp_path):
+    out_dir = tmp_path / "output"
+    out_dir.mkdir()
+    opt_dir = tmp_path / "testopts"
+    opt_dir.mkdir()
+    opt_file = opt_dir / "test-animated-gif.txt"
+    opt_file.write_text(
+        dedent(
+            """
+            #  test-animated-gif
+            output_folder: {3}
+            new_name: new-animated-gif
+            timestamp_mode: 2
+
+            crop_from_left_top(300, 300)
+
+            animated_gif(2000)
+
+            {0}
+            {1}
+            {2}
+            """
+        ).format(test_source_image_2, test_source_image_3, test_source_image_4, out_dir)
+    )
+    assert opt_file.exists()
+    args = [str(opt_file)]
+    result = image_snip.main(args)
+    assert result == 0
+    assert len(list(out_dir.glob("*.jpg"))) == 3, "Should be three jpg files."
+    gifs = list(out_dir.glob("*.gif"))
+    assert len(gifs) == 1, "Should be one gif file."
+    assert gifs[0].name.startswith("zgif-new-animated-gif"), "Gif file should have new name."
+    
 
 def test_add_text_footer():
     """
@@ -522,6 +558,25 @@ def test_rounded_green_border(tmp_path):
     assert px == (0, 255, 0), "Should be green"
 
 
+def test_new_name_no_file(tmp_path):
+    opt, img = get_test_opts_and_img(
+        tmp_path, "crop_zoom(300, 300)", "old_file_name"
+    )
+
+    # Add the un-set new_name option to the options file.
+    s = opt.read_text()
+    s = f"new_name:  \n{s}"
+    opt.write_text(s)
+
+    args = [str(opt)]
+    result = image_snip.main(args)
+    assert result == 0
+
+    assert img.exists()
+    expected_size = (300, 300)
+    assert Image.open(img).size == expected_size
+
+
 def test_new_name_one_file(tmp_path):
     opt, img = get_test_opts_and_img(
         tmp_path, "crop_zoom(300, 300)", "old_file_name"
@@ -563,3 +618,27 @@ def test_new_name_multiple_files(tmp_path):
     assert Image.open(expect_img1).size == expected_size
     expect_img2 = img.with_stem("new-image-name-002")
     assert expect_img2.exists()
+
+
+def test_new_name_multiple_files_timestamp(tmp_path):
+    opt, img = get_test_opts_and_img(
+        tmp_path, "crop_zoom(300, 300)", "old_file_name"
+    )
+
+    # Add the new_name option, timestamp_mode, and a second file, to the options file.
+    s = opt.read_text()
+    s = f"new_name: new-image-name\ntimestamp_mode: 1\n{s}"
+    s += f"\n{test_source_image_2}"
+    opt.write_text(s)
+
+    args = [str(opt)]
+    result = image_snip.main(args)
+    assert result == 0
+
+    imgs = list((tmp_path / "output").glob("new-image-name-00*.jpg"))
+    assert len(imgs) == 2, "Should be two images"
+
+    # Check the file names match the pattern for the trailing timestamp as '%Y%m%d_%H%M%S'.
+    pattern = re.compile(r"new-image-name-\d{3}-\d{8}_\d{6}\.jpg")
+    for img in imgs:
+        assert pattern.match(img.name), f"File name {img.name} does not match pattern"
