@@ -1,17 +1,16 @@
 @default:
   @just --list
 
-# Run test, lint, check, pyproject-build
+# Run test, lint, check, build
 @build: test lint check
-  pipenv run pyproject-build
+  uv build
 
 # Run ruff format --check
 @check:
-  pipenv run ruff format --check
+  uv run ruff format --check
 
-# Run check, lint, pipenv check
+# Run check and lint
 @checks: check lint
-  pipenv check
 
 # Remove dist and egg-info
 @clean:
@@ -22,12 +21,12 @@
 
 # Run ruff format (may change files)
 @format:
-  pipenv run ruff format
+  uv run ruff format
 
 # Run ruff check
 @lint:
-  pipenv run ruff check
+  uv run ruff check
 
 # Run pytest
 @test:
-  pipenv run pytest
+  uv run pytest

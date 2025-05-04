@@ -15,7 +15,9 @@ authors = [
   { name = "Bill Melvin", email = "bill@sbillmelvin.com" },
 ]
 
-dependencies = [ "pillow" ]
+dependencies = [
+ "pillow",
+]
 
 [project.urls]
 Source = "https://github.com/wmelvin/image-snip"
@@ -69,4 +71,11 @@ ignore = ["ISC001"]
   "PLR0913", # too many args in func def
   "PLR0915", # too many statements
   "PLR2004", # magic value
+]
+
+[dependency-groups]
+dev = [
+    "build>=1.2.2.post1",
+    "pytest>=8.3.5",
+    "ruff>=0.11.8",
 ]

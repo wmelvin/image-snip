@@ -4,6 +4,7 @@ notes-private.txt
 xplor/
 
 # Python.
+.venv/
 venv/
 __pycache__/
 
