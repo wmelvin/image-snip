@@ -1,3 +1,4 @@
+import pytest
 import re
 import shutil
 from datetime import datetime
@@ -642,3 +643,87 @@ def test_new_name_multiple_files_timestamp(tmp_path):
     pattern = re.compile(r"new-image-name-\d{3}-\d{8}_\d{6}\.jpg")
     for img in imgs:
         assert pattern.match(img.name), f"File name {img.name} does not match pattern"
+
+
+def test_new_name_star_option_does_not_overwrite_original(tmp_path, capsys):
+    dir_path = tmp_path / "test_same_name"
+    dir_path.mkdir()
+    opt_file = dir_path / "test-same-name.txt"
+    img_file = dir_path / "a.jpg"
+
+    #  Create a new image with white background.
+    img = Image.new("RGB", (100, 100), color=(255, 255, 255))
+    img.save(img_file)
+    assert img_file.exists()
+
+    opt_file.write_text(
+        dedent(
+            f"""
+            output_folder: {dir_path}
+
+            new_name: *
+
+            crop_zoom(50, 50)
+
+            {img_file}
+            """
+        )
+    )
+    assert opt_file.exists()
+
+    args = ["-o", str(opt_file)]
+    
+    # Check that exception was raised using pytest.
+    with pytest.raises(SystemExit) as e:
+        image_snip.main(args)
+    assert e.type == SystemExit
+    assert e.value.code == 1
+
+    # Check stderr for message.
+    captured = capsys.readouterr()
+    assert "Cannot overwrite original file" in captured.err    
+
+    # Check image size not changed.
+    out_img = Image.open(img_file)
+    assert out_img.size == (100, 100), "Original image size should not be changed"
+
+
+def test_new_name_star_option_keeps_original_name(tmp_path):
+    dir_path = tmp_path / "test_same_name"
+    dir_path.mkdir()
+    out_path = dir_path / "output"
+    out_path.mkdir()
+    opt_file = dir_path / "test-same-name.txt"
+    img_file = dir_path / "a.jpg"
+    out_file = out_path / "a.jpg"
+
+    opt_file.write_text(
+        dedent(
+            f"""
+            output_folder: {out_path}
+
+            new_name: *
+
+            crop_zoom(50, 50)
+
+            {img_file}
+            """
+        )
+    )
+    assert opt_file.exists()
+
+    #  Create a new image with white background.
+    img = Image.new("RGB", (100, 100), color=(255, 255, 255))
+    img.save(img_file)
+    assert img_file.exists()
+
+    args = [str(opt_file)]
+    result = image_snip.main(args)
+    assert result == 0
+
+    # Check that the output file was created.
+    assert out_file.exists()
+
+    # Check that the output file has the expected size.
+    expected_size = (50, 50)
+    assert Image.open(out_file).size == expected_size

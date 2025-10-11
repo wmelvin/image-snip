@@ -13,7 +13,7 @@ from typing import NamedTuple
 
 from PIL import Image, ImageDraw, ImageFilter, ImageFont
 
-__version__ = "2025.03.1"
+__version__ = "2025.10.1"
 
 app_label = f"image_snip (v{__version__})"
 
@@ -167,7 +167,8 @@ def get_output_name(
 
     p = Path(input_name)
 
-    if opts.new_name:
+    #  '*' in new_name means keep the original file name.
+    if opts.new_name and "*" not in opts.new_name:
         if len(opts.files) > 1:
             file_stem = f"{opts.new_name}-{file_num:03d}"
         else:
@@ -371,14 +372,16 @@ def get_args(arglist=None):
     )
 
     ap.add_argument(
+        "-o",
         "--overwrite",
         dest="do_overwrite",
         action="store_true",
-        help="Overwrite existing output files. By default, existing files are "
-        "not replaced.",
+        help="Overwrite existing output files. By default, existing output "
+        "files are not replaced. Does not allow overwriting original files.",
     )
 
     ap.add_argument(
+        "-t",
         "--template",
         dest="do_template",
         action="store_true",
@@ -407,6 +410,8 @@ def write_template_lines(file_path):
 
                     # --- Give files a new name. If more than one file, a sequence
                     #     number will be added to the file name.
+                    #     Enter '*' to keep original file names and not add '-crop' to
+                    #     the name.
                     # new_name:
 
                     # output_format: JPG | PNG
@@ -875,16 +880,19 @@ def main(arglist=None):
                     )
                     sys.exit(1)
 
-            # file_name = get_output_name(
-            #     out_path, opts.output_format, file_info.path, opts.timestamp_mode
-            # )
             file_name = get_output_name(out_path, file_info.path, opts, file_num)
             print(f"Saving '{file_name}'")
 
             p = Path(file_name)
             if p.exists():
                 if opts.do_overwrite:
-                    p.unlink()
+                    if file_info.path.samefile(p):
+                        sys.stderr.write(
+                            f"ERROR: Cannot overwrite original file:\n'{p}'\n"
+                        )
+                        sys.exit(1)
+                    else:
+                        p.unlink()
                 else:
                     sys.stderr.write(f"ERROR: Cannot replace exising file:\n'{p}'\n")
                     sys.exit(1)
