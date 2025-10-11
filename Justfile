@@ -15,9 +15,6 @@
 # Remove dist and egg-info
 @clean:
   -rm dist/*
-  -rmdir dist
-  -rm image_snip.egg-info/*
-  -rmdir image_snip.egg-info
 
 # Run ruff format (may change files)
 @format:

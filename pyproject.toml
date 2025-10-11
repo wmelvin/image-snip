@@ -7,7 +7,7 @@ name = "image_snip"
 dynamic = ["version"]
 description = 'Command-line utility to apply the same supported operations to a batch of image files.'
 readme = "README.md"
-requires-python = ">=3.8"
+requires-python = ">=3.9"
 license = {file = "LICENSE"}
 keywords = [ "images", "crop"]
 
