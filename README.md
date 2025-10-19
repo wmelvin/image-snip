@@ -4,7 +4,7 @@
 
 This Python program evolved from a one-off utility script used to process batches of images where the same areas were cropped. The original script started with hard-coded paths. Later an *options file* was added so the a set of operations could be applied to different sets of image files.
 
-This is a limited application of Python and [Pillow](https://python-pillow.org/). There are other, more powerful, options available for scripted image processing (such as [Automating GIMP](https://www.gimp.org/tutorials/Automate_Editing_in_GIMP/)).
+This is a limited application of Python and [Pillow](https://pypi.org/project/pillow/). There are other, more powerful, options available for scripted image processing (such as [Automating GIMP](https://www.gimp.org/tutorials/legacy/Automate_Editing_in_GIMP/)).
 
 
 ## Options File
