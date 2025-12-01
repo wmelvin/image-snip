@@ -13,7 +13,8 @@ from typing import NamedTuple
 
 from PIL import Image, ImageDraw, ImageFilter, ImageFont
 
-__version__ = "2025.10.2"
+#  Using calver (YYYY.0M.MICRO).
+__version__ = "2025.12.1"
 
 app_label = f"image_snip (v{__version__})"
 
