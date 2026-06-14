@@ -16,5 +16,4 @@ __pycache__/
 # App-specific.
 _0_bak/
 output/
-sausage.sh
-wipbak-list.txt
+temp.*

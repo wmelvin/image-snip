@@ -14,7 +14,7 @@ from typing import NamedTuple
 from PIL import Image, ImageDraw, ImageFilter, ImageFont
 
 #  Using calver (YYYY.0M.MICRO).
-__version__ = "2025.12.1"
+__version__ = "2026.06.1"
 
 app_label = f"image_snip (v{__version__})"
 

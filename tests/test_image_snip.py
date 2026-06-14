@@ -727,3 +727,44 @@ def test_new_name_star_option_keeps_original_name(tmp_path):
     # Check that the output file has the expected size.
     expected_size = (50, 50)
     assert Image.open(out_file).size == expected_size
+
+
+def test_output_suffix_blank(tmp_path):
+    opt, img = get_test_opts_and_img(
+        tmp_path, "crop_zoom(300, 300)", "output_suffix"
+    )
+
+    # Add the output_suffix option to the options file.
+    s = opt.read_text()
+    s = f"output_suffix: ''\n{s}"
+    opt.write_text(s)
+
+    args = [str(opt)]
+    result = image_snip.main(args)
+    assert result == 0
+
+    expect_img = img.parent / img.name.replace("-crop", "")
+    assert expect_img.exists()
+    expected_size = (300, 300)
+    assert Image.open(expect_img).size == expected_size
+
+
+def test_output_suffix_set(tmp_path):
+    opt, img = get_test_opts_and_img(
+        tmp_path, "crop_zoom(300, 300)", "output_suffix"
+    )
+
+    # Add the output_suffix option to the options file.
+    s = opt.read_text()
+    s = f"output_suffix: '-my new suffix '\n{s}"
+    opt.write_text(s)
+
+    args = [str(opt)]
+    result = image_snip.main(args)
+    assert result == 0
+
+    expect_img = img.parent / img.name.replace("-crop", "-my-new-suffix")
+    assert expect_img.exists()
+    expected_size = (300, 300)
+    assert Image.open(expect_img).size == expected_size
+
