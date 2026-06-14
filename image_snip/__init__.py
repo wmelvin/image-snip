@@ -46,6 +46,7 @@ class AppOptions(NamedTuple):
     text_font: str
     text_size: int
     text_numbering: int
+    output_suffix: str
 
 
 def get_new_size_zoom(current_size, target_size):
@@ -186,7 +187,7 @@ def get_output_name(
     elif opts.timestamp_mode == TIMESTAMP_MIC:
         file_stem = f"{file_stem}-{datetime.now().strftime('%Y%m%d_%H%M%S_%f')}"
     elif len(opts.new_name) == 0:
-        file_stem = f"{p.stem}-crop"
+        file_stem = f"{p.stem}{opts.output_suffix}"
 
     if opts.output_format:
         assert opts.output_format in ["JPG", "PNG"]
@@ -415,6 +416,8 @@ def write_template_lines(file_path):
                     #     the name.
                     # new_name:
 
+                    # output_suffix: "-crop"
+
                     # output_format: JPG | PNG
 
                     # timestamp_mode:
@@ -514,6 +517,7 @@ def get_opts(arglist=None) -> AppOptions:
     text_font = ""
     text_size = 0
     text_numbering = 0
+    output_suffix = "-crop"
 
     error_list = []
     caption = ""
@@ -557,6 +561,15 @@ def get_opts(arglist=None) -> AppOptions:
             if s.startswith("timestamp_mode:"):
                 #  Mode for adding a timestamp to the output file name.
                 timestamp_mode = int(get_opt_str(s))
+                continue
+
+            if s.startswith("output_suffix:"):
+                #  Suffix to append to the output file stem.
+                val = get_opt_str(s).strip("'\"")
+                val = val.strip().replace(" ", "-")
+                if val and not val.startswith("-"):
+                    val = "-" + val
+                output_suffix = val
                 continue
 
             if s.startswith(">"):
@@ -621,6 +634,7 @@ def get_opts(arglist=None) -> AppOptions:
         text_font,
         text_size,
         text_numbering,
+        output_suffix,
     )
 
 

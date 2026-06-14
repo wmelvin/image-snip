@@ -37,6 +37,12 @@ If the `new_name:` option is set to an asterisk, then the original file name is 
 
 ---
 
+`output_suffix:` *suffix-value*
+
+Replaces the default `-crop` suffix with the given *suffix-value*. The value can be in single or double quotes. If blank then no suffix is added.
+
+---
+
 `output_format:` *JPG* or *PNG*
 
 
