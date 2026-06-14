@@ -8,7 +8,7 @@ dynamic = ["version"]
 description = 'Command-line utility to apply the same supported operations to a batch of image files.'
 readme = "README.md"
 requires-python = ">=3.10"
-license = {file = "LICENSE"}
+license = "MIT"
 keywords = [ "images", "crop"]
 
 authors = [
