@@ -1,10 +1,10 @@
-import pytest
 import re
 import shutil
 from datetime import datetime
 from pathlib import Path
 from textwrap import dedent
 
+import pytest
 from PIL import Image, ImageFont
 
 import image_snip
@@ -16,7 +16,9 @@ test_source_image_3 = Path("./images/example-3-400x400.jpg")
 test_source_image_4 = Path("./images/example-4-400x400.jpg")
 
 
-def get_test_opts_and_img(test_path: Path, process_instruction: str, image_tag: str):
+def get_test_opts_and_img(
+    test_path: Path, process_instruction: str, image_tag: str, add_opts: str = ""
+):
     """
     Returns (options_file_path, expected_test_image_path).
     """
@@ -39,13 +41,14 @@ def get_test_opts_and_img(test_path: Path, process_instruction: str, image_tag: 
 
     opt_file.write_text(
         dedent(
-            """
-            output_folder: {2}
+            f"""
+            output_folder: {out_dir}
+            {add_opts}
             # timestamp_mode:
-            {0}
-            {1}
+            {process_instruction}
+            {test_image_file}
             """
-        ).format(process_instruction, test_image_file, out_dir)
+        )
     )
     assert opt_file.exists()
 
@@ -238,7 +241,7 @@ def test_animated_gif(tmp_path):
     assert result == 0
     assert len(list(out_dir.glob("*.jpg"))) == 3, "Should be three jpg files."
     assert len(list(out_dir.glob("*.gif"))) == 1, "Should be one gif file."
-    
+
 
 def test_animated_gif_only(tmp_path):
     #  Only animated_gif, no other process instructions.
@@ -301,8 +304,10 @@ def test_animated_gif_new_name(tmp_path):
     assert len(list(out_dir.glob("*.jpg"))) == 3, "Should be three jpg files."
     gifs = list(out_dir.glob("*.gif"))
     assert len(gifs) == 1, "Should be one gif file."
-    assert gifs[0].name.startswith("zgif-new-animated-gif"), "Gif file should have new name."
-    
+    assert gifs[0].name.startswith("zgif-new-animated-gif"), (
+        "Gif file should have new name."
+    )
+
 
 def test_add_text_footer():
     """
@@ -318,19 +323,52 @@ def test_add_text_footer():
     # Define the parameters.
     text = "Test"
     font = ImageFont.truetype("LiberationMono-Regular.ttf", 12)
-    font_size = 15
-    numbering = 0
     file_num = 0
-    file_count = 0
+    opts = image_snip.AppOptions(
+        opts_text="",
+        proc_list=[],
+        files=[],
+        output_dir="",
+        new_name="",
+        output_format="",
+        timestamp_mode=0,
+        gif_ms=0,
+        do_overwrite=False,
+        text_font=font,
+        text_size=12,
+        text_numbering=0,
+        footer_pad_px=image_snip.DEFAULT_FOOTER_PAD_PX,
+        footer_foreground_rgb=image_snip.DEFAULT_FOOTER_FOREGROUND_RGB,
+        footer_background_rgb=image_snip.DEFAULT_FOOTER_BACKGROUND_RGB,
+        output_suffix="",
+    )
 
     # Call the function
-    new_image = image_snip.add_text_footer(
-        image, text, font, font_size, numbering, file_num, file_count
-    )
+    new_image = image_snip.add_text_footer(image, text, font, file_num, opts)
 
     # Check the new image's size. Note: The expected size was determined
     # by an initial failed assertion.
     assert new_image.size == (100, 147)
+
+
+def test_add_text_footer_set_colors(tmp_path):
+    opt, img = get_test_opts_and_img(
+        tmp_path,
+        "crop_zoom(300, 300)",
+        "footer_colors",
+        "footer_pad_px: 30\n"
+        "footer_background_rgb: (255, 0, 0)\n"
+        "footer_foreground_rgb: (255, 255, 0)\n",
+    )
+
+    opt_lines = opt.read_text().splitlines()
+    opt_lines.insert(-1, 'text_footers("LiberationMono-Bold.ttf", 16, 2)')
+    opt_lines.insert(-1, "> Caption for footer")
+    opt.write_text("\n".join(opt_lines))
+
+    args = [str(opt)]
+    result = image_snip.main(args)
+    assert result == 0
 
 
 def test_add_a_border(tmp_path):
@@ -417,9 +455,9 @@ def test_add_a_border_default_color(tmp_path):
 
     assert out_img.size == (100, 100), "Should be original size"
 
-    assert (
-        out_img.getpixel((3, 3)) == image_snip.FOOTER_BACKGROUND_RGB
-    ), "Should be default color border"
+    assert out_img.getpixel((3, 3)) == image_snip.DEFAULT_FOOTER_BACKGROUND_RGB, (
+        "Should be default color border"
+    )
 
     assert out_img.getpixel((4, 4)) == (255, 255, 255), "Should be original color"
 
@@ -560,9 +598,7 @@ def test_rounded_green_border(tmp_path):
 
 
 def test_new_name_no_file(tmp_path):
-    opt, img = get_test_opts_and_img(
-        tmp_path, "crop_zoom(300, 300)", "old_file_name"
-    )
+    opt, img = get_test_opts_and_img(tmp_path, "crop_zoom(300, 300)", "old_file_name")
 
     # Add the un-set new_name option to the options file.
     s = opt.read_text()
@@ -579,9 +615,7 @@ def test_new_name_no_file(tmp_path):
 
 
 def test_new_name_one_file(tmp_path):
-    opt, img = get_test_opts_and_img(
-        tmp_path, "crop_zoom(300, 300)", "old_file_name"
-    )
+    opt, img = get_test_opts_and_img(tmp_path, "crop_zoom(300, 300)", "old_file_name")
 
     # Add the new_name option to the options file.
     s = opt.read_text()
@@ -599,9 +633,7 @@ def test_new_name_one_file(tmp_path):
 
 
 def test_new_name_multiple_files(tmp_path):
-    opt, img = get_test_opts_and_img(
-        tmp_path, "crop_zoom(300, 300)", "old_file_name"
-    )
+    opt, img = get_test_opts_and_img(tmp_path, "crop_zoom(300, 300)", "old_file_name")
 
     # Add the new_name option, and a second file, to the options file.
     s = opt.read_text()
@@ -622,9 +654,7 @@ def test_new_name_multiple_files(tmp_path):
 
 
 def test_new_name_multiple_files_timestamp(tmp_path):
-    opt, img = get_test_opts_and_img(
-        tmp_path, "crop_zoom(300, 300)", "old_file_name"
-    )
+    opt, img = get_test_opts_and_img(tmp_path, "crop_zoom(300, 300)", "old_file_name")
 
     # Add the new_name option, timestamp_mode, and a second file, to the options file.
     s = opt.read_text()
@@ -639,7 +669,8 @@ def test_new_name_multiple_files_timestamp(tmp_path):
     imgs = list((tmp_path / "output").glob("new-image-name-00*.jpg"))
     assert len(imgs) == 2, "Should be two images"
 
-    # Check the file names match the pattern for the trailing timestamp as '%Y%m%d_%H%M%S'.
+    #  Check the file names match the pattern for the trailing timestamp
+    #  as '%Y%m%d_%H%M%S'.
     pattern = re.compile(r"new-image-name-\d{3}-\d{8}_\d{6}\.jpg")
     for img in imgs:
         assert pattern.match(img.name), f"File name {img.name} does not match pattern"
@@ -672,16 +703,16 @@ def test_new_name_star_option_does_not_overwrite_original(tmp_path, capsys):
     assert opt_file.exists()
 
     args = ["-o", str(opt_file)]
-    
+
     # Check that exception was raised using pytest.
     with pytest.raises(SystemExit) as e:
         image_snip.main(args)
-    assert e.type == SystemExit
+    assert e.type is SystemExit
     assert e.value.code == 1
 
     # Check stderr for message.
     captured = capsys.readouterr()
-    assert "Cannot overwrite original file" in captured.err    
+    assert "Cannot overwrite original file" in captured.err
 
     # Check image size not changed.
     out_img = Image.open(img_file)
@@ -730,9 +761,7 @@ def test_new_name_star_option_keeps_original_name(tmp_path):
 
 
 def test_output_suffix_blank(tmp_path):
-    opt, img = get_test_opts_and_img(
-        tmp_path, "crop_zoom(300, 300)", "output_suffix"
-    )
+    opt, img = get_test_opts_and_img(tmp_path, "crop_zoom(300, 300)", "output_suffix")
 
     # Add the output_suffix option to the options file.
     s = opt.read_text()
@@ -750,9 +779,7 @@ def test_output_suffix_blank(tmp_path):
 
 
 def test_output_suffix_set(tmp_path):
-    opt, img = get_test_opts_and_img(
-        tmp_path, "crop_zoom(300, 300)", "output_suffix"
-    )
+    opt, img = get_test_opts_and_img(tmp_path, "crop_zoom(300, 300)", "output_suffix")
 
     # Add the output_suffix option to the options file.
     s = opt.read_text()
@@ -767,4 +794,3 @@ def test_output_suffix_set(tmp_path):
     assert expect_img.exists()
     expected_size = (300, 300)
     assert Image.open(expect_img).size == expected_size
-

@@ -40,7 +40,6 @@ image_snip = "image_snip:main"
 [tool.ruff]
 line-length = 88
 indent-width = 4
-extend-exclude = ["tests"]
 
 [tool.ruff.lint]
 select = [
@@ -71,6 +70,12 @@ ignore = ["ISC001"]
   "PLR0913", # too many args in func def
   "PLR0915", # too many statements
   "PLR2004", # magic value
+]
+
+[tool.ruff.lint.per-file-ignores]
+"**/test_*.py" = [
+    "S101",     # assert
+    "PLR2004",  # magic value
 ]
 
 [dependency-groups]

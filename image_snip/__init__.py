@@ -14,14 +14,14 @@ from typing import NamedTuple
 from PIL import Image, ImageDraw, ImageFilter, ImageFont
 
 #  Using calver (YYYY.0M.MICRO).
-__version__ = "2026.06.1"
+__version__ = "2026.08.1"
 
 app_label = f"image_snip (v{__version__})"
 
 
-FOOTER_PAD_PX = 10
-FOOTER_FOREGROUND_RGB = (255, 255, 255)
-FOOTER_BACKGROUND_RGB = (25, 25, 112)
+DEFAULT_FOOTER_PAD_PX = 10
+DEFAULT_FOOTER_FOREGROUND_RGB = (255, 255, 255)
+DEFAULT_FOOTER_BACKGROUND_RGB = (25, 25, 112)
 
 TIMESTAMP_SEC = 1  # Add date_time to file name, to the second.
 TIMESTAMP_MIC = 2  # Add date_time to file name, to the microsecond.
@@ -46,6 +46,9 @@ class AppOptions(NamedTuple):
     text_font: str
     text_size: int
     text_numbering: int
+    footer_pad_px: int
+    footer_foreground_rgb: tuple[int, int, int]
+    footer_background_rgb: tuple[int, int, int]
     output_suffix: str
 
 
@@ -277,7 +280,7 @@ def extract_border_attrs(s: str):
         return b[0], (b[1], b[2], b[3])
 
     #  Default border color same as text footer background color.
-    return (int(a[1]), FOOTER_BACKGROUND_RGB)
+    return (int(a[1]), DEFAULT_FOOTER_BACKGROUND_RGB)
 
 
 def extract_rounded_attrs(s: str):
@@ -405,15 +408,18 @@ def write_template_lines(file_path):
     with Path(file_path).open("a") as f:
         f.write(
             dedent(
-                """
-                    # --- image_snip --- Available options:
+                f"""
+                    # image_snip
+                    # {"-" * 70}
+                    # -- Available options:
 
                     # output_folder:
 
-                    # --- Give files a new name. If more than one file, a sequence
-                    #     number will be added to the file name.
-                    #     Enter '*' to keep original file names and not add '-crop' to
-                    #     the name.
+                    # -- Give files a new name. If more than one file, a sequence
+                    #    number will be added to the file name.
+                    #    Enter '*' to keep original file names and not add '-crop' to
+                    #    the name.
+                    #
                     # new_name:
 
                     # output_suffix: "-crop"
@@ -424,7 +430,12 @@ def write_template_lines(file_path):
                         # 1 = Add date_time to file name, to the second.
                         # 2 = Add date_time to file name, to the microsecond.
 
-                    # --- Available process instructions:
+                    # footer_pad_px: 10
+                    # footer_background_rgb: (25, 25, 112)
+                    # footer_foreground_rgb: (255, 255, 255)
+
+                    # {"-" * 70}
+                    # -- Available process instructions:
 
                     # crop_from_left_top(width, height)
 
@@ -440,16 +451,16 @@ def write_template_lines(file_path):
 
                     # crop_zoom(width, height)
 
-                    # --- border with default color
+                    # -- border with default color
                     # border(width)
 
-                    # --- border - specify RGB color
+                    # -- border - specify RGB color
                     # border(width, red, green, blue)
 
-                    # --- rounded border with transparent background
+                    # -- rounded border with transparent background
                     # rounded(radius, padding)
 
-                    # --- rounded border - specify RGB background color
+                    # -- rounded border - specify RGB background color
                     # rounded(radius, padding, red, green, blue)
 
                     # animated_gif(duration_milliseconds)
@@ -460,7 +471,7 @@ def write_template_lines(file_path):
                     #     1 = Image number in footer.
                     #     2 = Image number of total in footer.
 
-                    #--- Put list of image files below, one per line:
+                    # -- Put list of image files below, one per line:
                     #      If adding text_footers, put the text (caption) on the
                     #      line above the image file name, and begin that line
                     #      with the '>' character to indicate a caption.
@@ -518,6 +529,9 @@ def get_opts(arglist=None) -> AppOptions:
     text_size = 0
     text_numbering = 0
     output_suffix = "-crop"
+    footer_pad_px = DEFAULT_FOOTER_PAD_PX
+    footer_foreground_rgb = DEFAULT_FOOTER_FOREGROUND_RGB
+    footer_background_rgb = DEFAULT_FOOTER_BACKGROUND_RGB
 
     error_list = []
     caption = ""
@@ -570,6 +584,25 @@ def get_opts(arglist=None) -> AppOptions:
                 if val and not val.startswith("-"):
                     val = "-" + val
                 output_suffix = val
+                continue
+
+            if s.startswith("footer_pad_px:"):
+                #  Footer padding in pixels.
+                footer_pad_px = int(get_opt_str(s))
+                continue
+
+            if s.startswith("footer_foreground_rgb:"):
+                #  Footer foreground color in RGB.
+                footer_foreground_rgb = tuple(
+                    map(int, get_opt_str(s).strip("()").split(","))
+                )
+                continue
+
+            if s.startswith("footer_background_rgb:"):
+                #  Footer background color in RGB.
+                footer_background_rgb = tuple(
+                    map(int, get_opt_str(s).strip("()").split(","))
+                )
                 continue
 
             if s.startswith(">"):
@@ -634,6 +667,9 @@ def get_opts(arglist=None) -> AppOptions:
         text_font,
         text_size,
         text_numbering,
+        footer_pad_px,
+        footer_foreground_rgb,
+        footer_background_rgb,
         output_suffix,
     )
 
@@ -706,38 +742,36 @@ def get_est_text_ht(font, font_size, pad_px=20):
     return font_len + pad_px
 
 
-def add_text_footer(image, text, font, font_size, numbering, file_num, file_count):
+def add_text_footer(image, text, font, file_num, opts: AppOptions):
     """
     Add a footer with text to an image.
 
     image: Image object to modify.
     text: The text to add to the image.
     font: The font (ImageFont object) to use.
-    font_size: The font size to use.
-    numbering: The numbering option.
     file_num: The number of the current image file.
-    file_count: The total number of image files.
+    opts: The application options containing text numbering and size.
 
     Returns a new Image object with the footer added.
     """
 
-    est_ht = get_est_text_ht(font, font_size)
-    new_h = int(image.height + est_ht + (FOOTER_PAD_PX * 2))
+    est_ht = get_est_text_ht(font, opts.text_size)
+    new_h = int(image.height + est_ht + (opts.footer_pad_px * 2))
 
-    im = Image.new("RGB", (image.width, new_h), FOOTER_BACKGROUND_RGB)
+    im = Image.new("RGB", (image.width, new_h), opts.footer_background_rgb)
     im.paste(image, (0, 0))
 
     #  If the numbering option is 1 or 2 add the image number to the text,
     #  even if text is empty.
-    if numbering == 1:
+    if opts.text_numbering == 1:
         text = f"{text}  ({file_num})"
-    elif numbering == 2:
-        text = f"{text}  ({file_num}/{file_count})"
+    elif opts.text_numbering == 2:
+        text = f"{text}  ({file_num}/{len(opts.files)})"
 
     if text:
         draw = ImageDraw.Draw(im)
-        text_at = (est_ht, image.height + FOOTER_PAD_PX)
-        draw.text(text_at, text, font=font, fill=FOOTER_FOREGROUND_RGB)
+        text_at = (est_ht, image.height + opts.footer_pad_px)
+        draw.text(text_at, text, font=font, fill=opts.footer_foreground_rgb)
 
     return im
 
@@ -882,10 +916,8 @@ def main(arglist=None):
                             img,
                             file_info.text,
                             font,
-                            opts.text_size,
-                            opts.text_numbering,
                             file_num,
-                            len(opts.files),
+                            opts,
                         )
 
                 else:
