@@ -60,6 +60,26 @@ Add a *date_time* tag to the output file name. The setting value specifies the r
 
 If no *timestamp_mode* is specified, the output file is named with "*-crop*" appended to the source file name.
 
+---
+
+Text footer (caption) options:
+
+`footer_pad_px:` *number-of-pixels*
+
+`footer_foreground_rgb:` (*red-value*, *green-value*, *blue-value*)
+
+`footer_background_rgb:` (*red-value*, *green-value*, *blue-value*)
+
+Text footer default settings:
+
+`footer_pad_px: 10`
+
+`footer_foreground_rgb: (255, 255, 255)`
+
+`footer_background_rgb: (25, 25, 112)`
+
+
+---
 
 ### Process Instructions
 
